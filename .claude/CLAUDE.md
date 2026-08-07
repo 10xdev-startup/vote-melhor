@@ -157,6 +157,12 @@ e nenhuma infraestrutura e alterada. Setup inicial da infra: skill `/deploy-azur
 
 - **Cada `import` em uma unica linha** — nunca quebre a lista de named imports em varias linhas, mesmo longa. Ex.: `import { a, b, c, d } from "@/services/x"` (nao o formato multi-linha com um nome por linha).
 
+### Regex de acento (unicode)
+
+- **Sempre `\u0300-\u036f` escapado, nunca os combining marks literais** — as duas formas rodam idêntico (por isso passam em teste, review e lint), mas o escape some quando o conteúdo viaja por string JSON na tool call e o literal vira lixo fora de UTF-8. Depois de escrever/editar arquivo com essa regex, confira: `grep -n "u0300" <arquivo>` tem que casar e `grep -nP "[\x{0300}-\x{036f}]" <arquivo>` tem que vir vazio. Se sujou, corrija com `python3` **montando o texto por código** (`BS = chr(92)` e depois `BS + 'u0300-' + BS + 'u036f'`) — passar o escape direto no comando não resolve, porque ele já chega decodificado no script; reescrever pelo editor também reintroduz.
+
+- **Pra consertar bytes, use `read_bytes`/`write_bytes`** — `read_text`/`write_text` do Python fazem universal newlines: consertam o conteudo e trocam o line-ending do arquivo inteiro sem avisar. Foi assim que uma correcao de 1 linha virou um diff de 245 linhas fantasma neste proprio arquivo. Convencao deste repo: **tudo LF**, garantido pelo `.gitattributes` (`* text=auto eol=lf`). O 10x-mkt, de onde esta secao veio, usa outra (`.claude/**` em CRLF) — nao replique aquela aqui.
+
 ### Path aliases
 
 - **Frontend**: `@/*` → `./*`
