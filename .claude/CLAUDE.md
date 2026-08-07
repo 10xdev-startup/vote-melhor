@@ -253,9 +253,24 @@ Use dollar-quoting (`$$...$$`) nas strings dentro do SQL pra nao escapar aspas n
 O contrato completo de constraints, indices, triggers, grants e RLS fica na skill
 `supabase`. Tabelas de dominio sao definidas pelo briefing; nao improvisar DDL parcial.
 
+## Rotas do frontend
+
+O que define se a pagina tem sidebar e **em qual grupo ela mora**, nao a URL:
+
+- `app/page.tsx` → `/` — landing publica. Herda so o `app/layout.tsx`: sem sidebar.
+- `app/(lps)/lp/<nome>/page.tsx` → `/lp/<nome>` — paginas de anuncio/campanha. O grupo
+  `(lps)` **nao tem `layout.tsx`** de proposito: os parenteses somem da URL e a pagina
+  herda o layout raiz, entao nasce sem sidebar. O prefixo real e o segmento `lp/`.
+- `app/(dashboard)/<rota>/page.tsx` → `/<rota>` — area logada. O `(dashboard)/layout.tsx`
+  monta `SidebarProvider` + `AppSidebar`.
+
+Nova pagina publica nunca entra em `(dashboard)`, e item de sidebar so existe para rota
+de `(dashboard)`.
+
 ## Arquivos-chave
 
-- `frontend/app/(dashboard)/page.tsx` — pagina principal
+- `frontend/app/page.tsx` — landing publica (rota `/`)
+- `frontend/app/(dashboard)/inicio/page.tsx` — primeira tela da area logada
 - `frontend/components/AppSidebar.tsx` — sidebar com navegacao
 - `backend/src/index.ts` — entry point do servidor
 - `backend/src/database/supabase.ts` — configuracao do client (service-role)
