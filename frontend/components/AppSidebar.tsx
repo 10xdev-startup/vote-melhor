@@ -15,8 +15,10 @@ import { Check, Maximize2, Minimize2, MousePointerClick, PanelLeft } from 'lucid
 
 type SidebarMode = 'expanded' | 'collapsed' | 'hover'
 
+// A landing ('/') vive fora do grupo (dashboard) e nao entra aqui: a sidebar
+// e a navegacao da area logada.
 const NAV_ITEMS = [
-  { href: '/', title: 'Início', icon: '🏠' },
+  { href: '/inicio', title: 'Início', icon: '🏠' },
   { href: '/componentes', title: 'Componentes', icon: '🧩' },
 ]
 
