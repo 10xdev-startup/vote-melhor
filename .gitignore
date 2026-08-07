@@ -7,3 +7,11 @@ dist/
 !.env.example
 backend/package-lock.json
 frontend/package-lock.json
+
+# graphify: versiona o grafo (graph.json + report + manifest); ignora local/regeneravel
+graphify-out/cost.json
+graphify-out/cache/
+graphify-out/graph.html
+graphify-out/.graphify_*
+# Snapshots datados: ~8 MB por build, duplicata do graph.json atual.
+graphify-out/[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]/
