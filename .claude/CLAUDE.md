@@ -35,7 +35,44 @@
 
 ## Projeto
 
-**Meu Projeto** — descreva aqui o que o projeto faz.
+**10xGov** — plataforma open source que torna os dados publicos do governo brasileiro
+acessiveis, compreensiveis e utilizaveis por qualquer pessoa. Os dados ja sao publicos
+(votacoes, projetos de lei, discursos, gastos, presenca, emendas), mas estao espalhados
+por orgaos diferentes, em formatos complexos, e exigem conhecimento tecnico. A 10xGov
+unifica essas fontes oficiais e usa IA para organiza-las, relaciona-las e explica-las em
+linguagem simples.
+
+Referencia completa de visao, publico e roadmap: `README.md`.
+
+### Principios que restringem o codigo
+
+Nao sao valores abstratos — cada um vira decisao tecnica:
+
+- **Dado oficial e a unica fonte de verdade.** Nada de dado inferido, estimado ou
+  cacheado sem procedencia. Toda entidade persistida carrega origem e data de coleta.
+- **Toda resposta cita a fonte.** Se um endpoint ou tela nao consegue linkar o documento
+  oficial que sustenta a informacao, ele nao esta pronto.
+- **IA explica, nao opina.** Resumo, traducao de juridiques, linha do tempo, comparacao,
+  similaridade — sim. Juizo de valor politico, recomendacao de voto, adjetivo carregado — nao.
+  Prompt que permita ao modelo extrapolar alem do documento e bug.
+- **Neutralidade politica** na modelagem, na copy e no ranking. Ordenacao default nunca
+  privilegia partido, ideologia ou parlamentar.
+- **Open source e API aberta.** O repo e publico: zero segredo versionado, e todo dado
+  exposto na UI deve estar acessivel tambem via API.
+- **Arquitetura modular por fonte.** Cada orgao (Camara, Senado, TSE...) e um modulo de
+  ingestao isolado atras de um contrato normalizado — adicionar fonte nao mexe no nucleo.
+
+### Dominio
+
+Fontes hoje: **Camara dos Deputados** e **Senado Federal**. Depois: TSE, Portal da
+Transparencia, DOU, Compras.gov, IBGE, IPEA, Tesouro, STF, STJ, Tribunais de Contas.
+
+Entidades centrais: parlamentares, votacoes, proposicoes (PL, PEC, MP), comissoes,
+discursos, presenca em sessoes, gastos, emendas.
+
+Pipeline: `APIs oficiais → normalizacao → banco → indice semantico → IA → API + web`.
+
+### Stack
 
 - **Frontend**: Next.js 16, TypeScript, Tailwind CSS, shadcn/ui (Radix) — `frontend/`
 - **Backend**: Node.js, Express, TypeScript, Supabase (PostgreSQL) — `backend/`
