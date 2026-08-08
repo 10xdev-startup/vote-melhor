@@ -16,14 +16,14 @@ on:
   workflow_dispatch:
 
 env:
-  APP_NAME: seu-app-name
-  ACR_NAME: seu-acr # Azure Container Registry (so o nome, sem .azurecr.io)
-  RESOURCE_GROUP: seu-resource-group
-  BACKEND_APP: seu-backend-app # nome do Web App do backend
-  FRONTEND_APP: seu-frontend-app # nome do Web App do frontend
-  BACKEND_IMAGE: seu-backend-image
-  FRONTEND_IMAGE: seu-frontend-image
-  BACKEND_PUBLIC_URL: https://seu-backend.azurewebsites.net # backend de prod (build-arg do front)
+  APP_NAME: 10xGov
+  ACR_NAME: cr10xgov # Azure Container Registry (so o nome, sem .azurecr.io)
+  RESOURCE_GROUP: resource-10xgov
+  BACKEND_APP: web-backend-10xgov # nome do Web App do backend
+  FRONTEND_APP: web-frontend-10xgov # nome do Web App do frontend
+  BACKEND_IMAGE: 10xgov-backend
+  FRONTEND_IMAGE: 10xgov-frontend
+  BACKEND_PUBLIC_URL: https://web-backend-10xgov.azurewebsites.net # backend de prod (build-arg do front)
 
 jobs:
   docker-deploy:
