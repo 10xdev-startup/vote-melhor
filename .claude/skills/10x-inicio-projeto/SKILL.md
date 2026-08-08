@@ -66,7 +66,7 @@ Apresentar as variaveis exigidas pelo fluxo escolhido antes de criar envs locais
   `SUPABASE_PROJECT_REF` e `SUPABASE_ACCESS_TOKEN`.
 
 Perguntar quais valores ja estao disponiveis e orientar o usuario a grava-los em
-`frontend/.env.local` e `backend/.env`. Nunca pedir que segredos sejam expostos no chat, nunca
+`frontend/.env` e `backend/.env`. Nunca pedir que segredos sejam expostos no chat, nunca
 copiar valor entre produtos e nunca inventar placeholder como se fosse credencial valida.
 
 ### 3. Fixar arquitetura e mapa de telas
@@ -135,7 +135,7 @@ bootstrap, testes pertinentes, typecheck, lint, build, smoke do fluxo vertical, 
 erros, Docker/workflow e `$supabase` em modo auditoria. Qualquer falha bloqueia o deploy.
 
 Somente com todos os gates aprovados, perguntar: “Quer partir para o deploy na Azure agora? A
-skill vai ler as variaveis de `backend/.env` e `frontend/.env.local` sem mostrar os valores,
+skill vai ler as variaveis de `backend/.env` e `frontend/.env` sem mostrar os valores,
 apresentar os recursos e custos escolhidos e pedir um novo OK antes de executar a Azure CLI.”
 Invocar `deploy-azure` apenas se o usuario responder sim. Uma resposta negativa encerra o
 bootstrap local sem publicar nada.

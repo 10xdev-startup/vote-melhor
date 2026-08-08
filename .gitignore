@@ -4,7 +4,6 @@ dist/
 *.log
 .env
 .env.*
-!.env.example
 backend/package-lock.json
 frontend/package-lock.json
 

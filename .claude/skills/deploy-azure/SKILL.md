@@ -28,7 +28,7 @@ fluxo de implementacao, corrigir, repetir o gate e apresentar nova evidencia.
 
 Com todos os gates aprovados, perguntar se o usuario quer iniciar o deploy. Informar antes:
 
-> Vou ler `backend/.env` e `frontend/.env.local` localmente, validar apenas a presenca das
+> Vou ler `backend/.env` e `frontend/.env` localmente, validar apenas a presenca das
 > variaveis e usa-las nos comandos sem mostrar os valores. Nenhum management token sera enviado
 > para a aplicacao. Primeiro mostrarei conta Azure, recursos, regiao, SKUs, custo atual e mutacoes;
 > so executarei comandos mutantes da Azure CLI depois de um novo OK.
@@ -51,7 +51,7 @@ Carregar e validar sem imprimir valores:
 ```bash
 set -a
 . backend/.env
-. frontend/.env.local
+. frontend/.env
 set +a
 
 required_vars=(

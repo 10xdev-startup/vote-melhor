@@ -20,13 +20,11 @@ const required = [
   'package.json',
   'package-lock.json',
   '.dockerignore',
-  'backend/.env.example',
   'backend/src/controllers',
   'backend/src/models',
   'backend/src/routes',
   'backend/src/middleware',
   'backend/src/database/supabase.ts',
-  'frontend/.env.example',
   'frontend/app',
   'frontend/components',
   'frontend/services/apiClient.ts',
@@ -72,8 +70,8 @@ try {
 }
 
 const ignore = readFileSync(join(root, '.gitignore'), 'utf8')
-if (!ignore.includes('.env.*') || !ignore.includes('!.env.example')) {
-  errors.push('.gitignore nao protege envs reais e exemplos separadamente')
+if (!ignore.includes('.env') || !ignore.includes('.env.*')) {
+  errors.push('.gitignore nao protege os envs reais')
 }
 
 function filesUnder(path) {
@@ -133,8 +131,11 @@ if (existsSync(sidebarPath)) {
 
 if (mode === 'project') {
   if (rootPackage.name === 'meu-projeto') errors.push('package raiz ainda usa nome meu-projeto')
-  const envExample = readFileSync(join(root, 'frontend/.env.example'), 'utf8')
-  if (/NEXT_PUBLIC_APP_NAME=Meu Projeto/.test(envExample)) errors.push('nome Meu Projeto ainda esta no env do frontend')
+  // frontend/.env e local e nao versionado; so checa se existir na maquina
+  const frontEnvPath = join(root, 'frontend/.env')
+  if (existsSync(frontEnvPath) && /NEXT_PUBLIC_APP_NAME=Meu Projeto/.test(readFileSync(frontEnvPath, 'utf8'))) {
+    errors.push('nome Meu Projeto ainda esta no env do frontend')
+  }
   const plans = existsSync(join(root, '.cursor/plans/fazendo')) ? readdirSync(join(root, '.cursor/plans/fazendo')) : []
   if (!plans.some((name) => name.endsWith('.plan.md'))) errors.push('briefing/plano de inicio nao registrado')
   const workflow = readFileSync(join(root, '.github/workflows/deploy.yml'), 'utf8')

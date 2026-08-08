@@ -195,16 +195,36 @@ Requer Node.js 20 ou superior e npm.
 
 ```bash
 npm ci
-cp frontend/.env.example frontend/.env.local
 npm run dev
 ```
 
-O backend precisa de um `backend/.env` com `PORT`, `SUPABASE_URL`,
-`SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_ANON_KEY`, `SUPABASE_PROJECT_REF` e
-`SUPABASE_ACCESS_TOKEN`. Os valores saem do painel do Supabase em Settings → API.
+Cada workspace lê um único arquivo `.env`, ambos fora do versionamento.
 
-Preencha os dois envs locais antes de testar autenticação ou banco. O backend continua
-respondendo em `/health` sem credenciais, mas rotas que acessam o Supabase exigem configuração.
+`backend/.env`:
+
+```bash
+PORT=3001
+SUPABASE_URL=https://<project-ref>.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=<service role>
+SUPABASE_ANON_KEY=<publishable ou anon>
+SUPABASE_PROJECT_REF=<project-ref>
+SUPABASE_ACCESS_TOKEN=sbp_<token de management>
+```
+
+`frontend/.env`:
+
+```bash
+NEXT_PUBLIC_API_URL=http://localhost:3001
+NEXT_PUBLIC_APP_NAME=10xGov
+NEXT_PUBLIC_SUPABASE_URL=https://<project-ref>.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<publishable ou anon>
+```
+
+Os valores saem do painel do Supabase em Settings → API. O `SUPABASE_ACCESS_TOKEN` é o
+token de management (Account → Access Tokens) e nunca vai para a aplicação em produção.
+
+Preencha os dois antes de testar autenticação ou banco. O backend continua respondendo em
+`/health` sem credenciais, mas rotas que acessam o Supabase exigem configuração.
 
 - Frontend: <http://localhost:3000>
 - Backend: <http://localhost:3001>
