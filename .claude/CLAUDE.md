@@ -80,6 +80,11 @@ Pipeline: `APIs oficiais → normalizacao → banco → indice semantico → IA 
 
 ## Comandos
 
+**`typecheck`, `lint`, `build` e `dev` sao rodados PELO DEV, nao pelo agente** — o WSL dele
+nao aguenta e trava (mesma razao da regra de `npm test` em **Testes**). Ao fechar uma fase,
+liste os comandos e espere o retorno colado. O agente roda apenas testes Jest **filtrados por
+arquivo**, que sao leves.
+
 ### Raiz (workspaces)
 ```bash
 npm ci             # Instala exatamente o lockfile raiz
@@ -117,6 +122,7 @@ Backend: `ts-jest` (env node). Frontend: `next/jest` + jsdom + Testing Library. 
 - **Descobrir o que rodar ao mexer no codigo** (os testes ficam flat, entao use o grafo de imports do Jest em vez de procurar na mao):
   - `npm test -w backend -- -o` → so os testes afetados pelo diff git (uncommitted). Subconjunto pequeno, seguro pro WSL.
   - `npm test -w backend -- --findRelatedTests src/utils/apiResponse.ts` → os testes que tocam aquele arquivo (transitivo).
+- **Todo teste comeca importando os globals**: `import { describe, it, expect } from "@jest/globals"`. O projeto **nao instala `@types/jest`** de proposito — sem o import, o Jest passa e o `tsc --noEmit` quebra com dezenas de `Cannot find name 'describe'` (uma causa so). Nao "conserte" isso instalando `@types/jest`: ele injeta `describe`/`it`/`expect` no escopo global de todo o workspace (no backend, `roots: src/` faz esses nomes valerem dentro de controllers e models), desincroniza da versao do `jest` (DefinitelyTyped e versionado a parte) e colide com qualquer runner que exporte `expect`/`test` (Playwright, Vitest).
 - Mocke deps externas (`jest.mock(...)` p/ Supabase etc.); nao mocke o codigo sob teste.
 - TDD para bug: escreva o teste que reproduz o bug **primeiro**, depois faca passar.
 - Tarefa so esta "feita" quando os testes pertinentes passam + `typecheck` + `lint`.
@@ -245,6 +251,23 @@ curl -s -X POST "https://api.supabase.com/v1/projects/$SUPABASE_PROJECT_REF/data
   -d '{"query":"<SQL aqui>"}'
 ```
 Use dollar-quoting (`$$...$$`) nas strings dentro do SQL pra nao escapar aspas no JSON.
+
+**DDL multi-linha (create table, function, trigger) nao cabe no `-d` inline** — o SQL tem
+newlines e `$$...$$` de corpo de function, e escapar isso a mao dentro do JSON corrompe o
+comando. Escreva o SQL num arquivo **no scratchpad** (nunca no repo) e deixe o `json.dumps`
+montar o payload:
+```bash
+source .env
+S=<scratchpad>                       # o diretorio de scratchpad da sessao, fora do repo
+python3 -c "import json; print(json.dumps({'query': open('$S/ddl.sql').read()}))" > $S/payload.json
+curl -s -X POST "https://api.supabase.com/v1/projects/$SUPABASE_PROJECT_REF/database/query" \
+  -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  --data-binary @$S/payload.json
+```
+Envolva o DDL em `begin; ... rollback;`, rode uma vez pra validar, troque **so** o `rollback`
+por `commit` (`sed -i 's/^rollback;$/commit;/'`) e rode de novo. Depois confirme pelo estado
+real (`information_schema`, `pg_policies`, `pg_trigger`), nunca pelo HTTP 200.
 
 ### Tabelas da fundacao
 
