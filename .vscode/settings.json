@@ -1,0 +1,8 @@
+{
+  // Usa o TypeScript do repositório (5.9.3) em vez do que vem embutido no editor.
+  // Sem isso o editor valida com uma versão mais nova e acusa problemas que o
+  // `tsc` do projeto não tem — por exemplo `baseUrl` marcado como deprecado em
+  // backend/tsconfig.json, que o TS 5.9.3 aceita normalmente.
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "typescript.enablePromptUseWorkspaceTsdk": true
+}
