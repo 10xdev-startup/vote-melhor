@@ -1,0 +1,5 @@
+* text=auto eol=lf
+
+*.tmpl linguist-language=Markdown
+
+graphify-out/graph.json merge=graphify

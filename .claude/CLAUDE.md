@@ -35,7 +35,44 @@
 
 ## Projeto
 
-**Meu Projeto** — descreva aqui o que o projeto faz.
+**10xGov** — plataforma open source que torna os dados publicos do governo brasileiro
+acessiveis, compreensiveis e utilizaveis por qualquer pessoa. Os dados ja sao publicos
+(votacoes, projetos de lei, discursos, gastos, presenca, emendas), mas estao espalhados
+por orgaos diferentes, em formatos complexos, e exigem conhecimento tecnico. A 10xGov
+unifica essas fontes oficiais e usa IA para organiza-las, relaciona-las e explica-las em
+linguagem simples.
+
+Referencia completa de visao, publico e roadmap: `README.md`.
+
+### Principios que restringem o codigo
+
+Nao sao valores abstratos — cada um vira decisao tecnica:
+
+- **Dado oficial e a unica fonte de verdade.** Nada de dado inferido, estimado ou
+  cacheado sem procedencia. Toda entidade persistida carrega origem e data de coleta.
+- **Toda resposta cita a fonte.** Se um endpoint ou tela nao consegue linkar o documento
+  oficial que sustenta a informacao, ele nao esta pronto.
+- **IA explica, nao opina.** Resumo, traducao de juridiques, linha do tempo, comparacao,
+  similaridade — sim. Juizo de valor politico, recomendacao de voto, adjetivo carregado — nao.
+  Prompt que permita ao modelo extrapolar alem do documento e bug.
+- **Neutralidade politica** na modelagem, na copy e no ranking. Ordenacao default nunca
+  privilegia partido, ideologia ou parlamentar.
+- **Open source e API aberta.** O repo e publico: zero segredo versionado, e todo dado
+  exposto na UI deve estar acessivel tambem via API.
+- **Arquitetura modular por fonte.** Cada orgao (Camara, Senado, TSE...) e um modulo de
+  ingestao isolado atras de um contrato normalizado — adicionar fonte nao mexe no nucleo.
+
+### Dominio
+
+Fontes hoje: **Camara dos Deputados** e **Senado Federal**. Depois: TSE, Portal da
+Transparencia, DOU, Compras.gov, IBGE, IPEA, Tesouro, STF, STJ, Tribunais de Contas.
+
+Entidades centrais: parlamentares, votacoes, proposicoes (PL, PEC, MP), comissoes,
+discursos, presenca em sessoes, gastos, emendas.
+
+Pipeline: `APIs oficiais → normalizacao → banco → indice semantico → IA → API + web`.
+
+### Stack
 
 - **Frontend**: Next.js 16, TypeScript, Tailwind CSS, shadcn/ui (Radix) — `frontend/`
 - **Backend**: Node.js, Express, TypeScript, Supabase (PostgreSQL) — `backend/`
@@ -119,6 +156,12 @@ e nenhuma infraestrutura e alterada. Setup inicial da infra: skill `/deploy-azur
 ### Imports
 
 - **Cada `import` em uma unica linha** — nunca quebre a lista de named imports em varias linhas, mesmo longa. Ex.: `import { a, b, c, d } from "@/services/x"` (nao o formato multi-linha com um nome por linha).
+
+### Regex de acento (unicode)
+
+- **Sempre `\u0300-\u036f` escapado, nunca os combining marks literais** — as duas formas rodam idêntico (por isso passam em teste, review e lint), mas o escape some quando o conteúdo viaja por string JSON na tool call e o literal vira lixo fora de UTF-8. Depois de escrever/editar arquivo com essa regex, confira: `grep -n "u0300" <arquivo>` tem que casar e `grep -nP "[\x{0300}-\x{036f}]" <arquivo>` tem que vir vazio. Se sujou, corrija com `python3` **montando o texto por código** (`BS = chr(92)` e depois `BS + 'u0300-' + BS + 'u036f'`) — passar o escape direto no comando não resolve, porque ele já chega decodificado no script; reescrever pelo editor também reintroduz.
+
+- **Pra consertar bytes, use `read_bytes`/`write_bytes`** — `read_text`/`write_text` do Python fazem universal newlines: consertam o conteudo e trocam o line-ending do arquivo inteiro sem avisar. Foi assim que uma correcao de 1 linha virou um diff de 245 linhas fantasma neste proprio arquivo. Convencao deste repo: **tudo LF**, garantido pelo `.gitattributes` (`* text=auto eol=lf`). O 10x-mkt, de onde esta secao veio, usa outra (`.claude/**` em CRLF) — nao replique aquela aqui.
 
 ### Path aliases
 
@@ -210,9 +253,24 @@ Use dollar-quoting (`$$...$$`) nas strings dentro do SQL pra nao escapar aspas n
 O contrato completo de constraints, indices, triggers, grants e RLS fica na skill
 `supabase`. Tabelas de dominio sao definidas pelo briefing; nao improvisar DDL parcial.
 
+## Rotas do frontend
+
+O que define se a pagina tem sidebar e **em qual grupo ela mora**, nao a URL:
+
+- `app/page.tsx` → `/` — landing publica. Herda so o `app/layout.tsx`: sem sidebar.
+- `app/(lps)/lp/<nome>/page.tsx` → `/lp/<nome>` — paginas de anuncio/campanha. O grupo
+  `(lps)` **nao tem `layout.tsx`** de proposito: os parenteses somem da URL e a pagina
+  herda o layout raiz, entao nasce sem sidebar. O prefixo real e o segmento `lp/`.
+- `app/(dashboard)/<rota>/page.tsx` → `/<rota>` — area logada. O `(dashboard)/layout.tsx`
+  monta `SidebarProvider` + `AppSidebar`.
+
+Nova pagina publica nunca entra em `(dashboard)`, e item de sidebar so existe para rota
+de `(dashboard)`.
+
 ## Arquivos-chave
 
-- `frontend/app/(dashboard)/page.tsx` — pagina principal
+- `frontend/app/page.tsx` — landing publica (rota `/`)
+- `frontend/app/(dashboard)/inicio/page.tsx` — primeira tela da area logada
 - `frontend/components/AppSidebar.tsx` — sidebar com navegacao
 - `backend/src/index.ts` — entry point do servidor
 - `backend/src/database/supabase.ts` — configuracao do client (service-role)
