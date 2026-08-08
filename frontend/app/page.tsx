@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { Instrument_Serif } from 'next/font/google'
 import { ArrowDown, ArrowRight, Building2, Database, FileText, Landmark, Link2, Scale, Search, Sparkles, Vote } from 'lucide-react'
 
@@ -38,7 +39,16 @@ const PRINCIPIOS = [
 export default function HomePage(): React.JSX.Element {
   return (
     <div className={`${instrumentSerif.variable} min-h-screen overflow-hidden bg-[#f2efe7] text-[#111725] selection:bg-[#315bff] selection:text-white`}>
-      <section className="relative mx-auto max-w-[1180px] px-6 pb-14 pt-14 md:px-10 md:pb-20 md:pt-20">
+      <header className="mx-auto flex max-w-[1180px] items-center justify-end px-6 pt-6 md:px-10">
+        <Link
+          href="/login"
+          className="rounded-full border border-[#111725]/12 bg-white/45 px-4 py-2 text-sm font-semibold text-[#111725]/75 transition hover:border-[#111725]/25 hover:text-[#111725]"
+        >
+          Entrar
+        </Link>
+      </header>
+
+      <section className="relative mx-auto max-w-[1180px] px-6 pb-14 pt-10 md:px-10 md:pb-20 md:pt-14">
         <div className="pointer-events-none absolute -right-24 top-0 size-[430px] rounded-full bg-[#315bff]/10 blur-[100px]" aria-hidden />
 
         <div className="relative grid items-center gap-12 lg:grid-cols-[1.05fr_0.95fr]">
