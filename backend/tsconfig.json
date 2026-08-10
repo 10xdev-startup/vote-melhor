@@ -19,6 +19,11 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedIndexedAccess": true,
     "exactOptionalPropertyTypes": true,
+    // NAO remova baseUrl: o tsconfig-paths@4 resolve os aliases `@/*` a partir dele
+    // (config-loader.js:42), e sem ele o `npm run dev` do backend quebra
+    // (ts-node-dev --require tsconfig-paths/register). Um editor com TypeScript mais
+    // novo que o do projeto marca esta linha como deprecada — a correcao e o editor
+    // usar o TS do workspace (.vscode/settings.json), nao mexer aqui.
     "baseUrl": "./src",
     "paths": {
       "@/*": ["*"],

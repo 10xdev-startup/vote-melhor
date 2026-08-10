@@ -5,7 +5,13 @@ import { sendOk } from '@/utils/apiResponse'
 import { userRoutes } from '@/routes/userRoutes'
 import { errorHandler } from '@/middleware'
 
-dotenv.config()
+// Unico ponto de carga da env no backend.
+// `override: true` NAO e detalhe: sem ele o dotenv preserva o que ja existe no
+// ambiente, e um `export SUPABASE_URL=...` no ~/.bashrc (de outro projeto) faz este
+// backend falar com o Supabase errado — o sintoma e 401 "Token invalido" em todo
+// endpoint autenticado, porque o JWT foi emitido por outro projeto.
+// Em producao (Azure) nao existe arquivo .env, entao as vars do ambiente seguem valendo.
+dotenv.config({ override: true })
 
 const app = express()
 const PORT = process.env['PORT'] || 3001
