@@ -6,9 +6,8 @@ export type DataFileFormat = "CSV" | "JSON"
  *
  * `tabular`: uma linha por registro, com cabecalho. Da pra mostrar como tabela.
  * `report`: relatorio formatado. Os demonstrativos contabeis do Tesouro sao assim —
- * preambulo institucional e balanco de duas colunas lado a lado (ATIVO x PASSIVO). O parser
- * le sem erro, mas jogar isso numa grade nao fica mais legivel que o CSV cru, entao esses
- * ficam so com download ate existir um renderizador que entenda o formato.
+ * preambulo institucional e balanco de duas colunas lado a lado (ATIVO x PASSIVO). O preview
+ * usa um renderer proprio para preservar metadados, secoes e a largura variavel da grade.
  */
 export type DataFileLayout = "tabular" | "report"
 
@@ -86,8 +85,9 @@ export interface Dataset {
   editions: DatasetEdition[]
 }
 
-/** Amostra do conteudo de um arquivo, lida na hora a partir da fonte oficial. */
-export interface FilePreview {
+/** Amostra de uma tabela regular, lida na hora a partir da fonte oficial. */
+export interface TabularFilePreview {
+  layout: "tabular"
   fileId: string
   columns: string[]
   rows: string[][]
@@ -100,3 +100,28 @@ export interface FilePreview {
   /** `true` quando o arquivo tem mais linhas do que as devolvidas. */
   truncated: boolean
 }
+
+export interface ReportPreviewMetadata {
+  label: string
+  value: string
+}
+
+export interface ReportPreviewRow {
+  cells: string[]
+  kind: "section" | "header" | "total" | "data"
+}
+
+/** Demonstrativo contabil com metadados e grade de largura variavel. */
+export interface ReportFilePreview {
+  layout: "report"
+  fileId: string
+  title: string
+  metadata: ReportPreviewMetadata[]
+  rows: ReportPreviewRow[]
+  columnCount: number
+  rowCount: number
+  totalRowCount: number
+  truncated: boolean
+}
+
+export type FilePreview = TabularFilePreview | ReportFilePreview

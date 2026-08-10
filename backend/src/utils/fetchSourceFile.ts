@@ -7,7 +7,7 @@ const FETCH_TIMEOUT_MS = 20_000
 // O balanceador do Senado nao conclui o handshake com o ClientHello TLS 1.3 do Node 22.
 // curl e openssl tambem acabam negociando TLS 1.2 com esse host. Restrinja o downgrade ao
 // dominio afetado para nao desabilitar TLS 1.3 nas demais origens do catalogo.
-const TLS_1_2_ONLY_HOSTS = new Set(['www.senado.gov.br'])
+const TLS_1_2_ONLY_HOSTS = new Set(['www.senado.gov.br', 'www12.senado.leg.br'])
 
 function readBody(response: IncomingMessage): Promise<Buffer> {
   return new Promise((resolve, reject) => {

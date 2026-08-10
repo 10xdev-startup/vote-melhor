@@ -35,6 +35,25 @@ export interface ParsedSpreadsheet {
   truncated: boolean
 }
 
+export interface ParsedReportMetadata {
+  label: string
+  value: string
+}
+
+export interface ParsedReportRow {
+  cells: string[]
+  kind: 'section' | 'header' | 'total' | 'data'
+}
+
+export interface ParsedFinancialReport {
+  title: string
+  metadata: ParsedReportMetadata[]
+  rows: ParsedReportRow[]
+  columnCount: number
+  totalRowCount: number
+  truncated: boolean
+}
+
 // Somar uma coluna exige conhecer sua semantica. Nao tente totalizar todo numero do arquivo:
 // ano, mes e codigo de natureza tambem parecem numericos, mas a soma deles nao tem sentido.
 const TOTALLED_CURRENCY_COLUMNS = new Set(['Receita Arrecadada'])
@@ -97,6 +116,14 @@ function toCell(value: unknown): string {
 
 function isEmptyRow(row: string[]): boolean {
   return row.every((cell) => cell === '')
+}
+
+function normalizeLabel(value: string | undefined): string {
+  return (value ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toUpperCase()
 }
 
 /**
@@ -188,7 +215,7 @@ function parseJsonRecords(text: string, maxRows: number): ParsedSpreadsheet {
   }
 }
 
-function parseGrid(buffer: Buffer, format: 'CSV' | 'XLSX', maxRows: number): ParsedSpreadsheet {
+function readGrid(buffer: Buffer, format: 'CSV' | 'XLSX'): string[][] {
   const isCsv = format === 'CSV'
   let workbook: XLSX.WorkBook
   try {
@@ -210,10 +237,113 @@ function parseGrid(buffer: Buffer, format: 'CSV' | 'XLSX', maxRows: number): Par
   if (!sheet) throw new SpreadsheetParseError('empty_file', 'Planilha sem abas')
 
   const grid = XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1, raw: isCsv, blankrows: true })
-  const normalized = grid.map((row) => (Array.isArray(row) ? row.map(toCell) : []))
+  // `dense: true` ainda pode devolver arrays esparsos em CSVs com muitos `;;;;`. Array.map
+  // preservaria os buracos como `undefined`; Array.from materializa cada posicao como ''.
+  const normalized = grid.map((row) =>
+    Array.isArray(row) ? Array.from({ length: row.length }, (_value, index) => toCell(row[index])) : [],
+  )
   if (normalized.length === 0) throw new SpreadsheetParseError('empty_file', 'Arquivo vazio')
 
-  return buildTable(normalized, maxRows)
+  return normalized
+}
+
+function parseGrid(buffer: Buffer, format: 'CSV' | 'XLSX', maxRows: number): ParsedSpreadsheet {
+  return buildTable(readGrid(buffer, format), maxRows)
+}
+
+const REPORT_METADATA_LABELS = new Map([
+  ['TITULO', 'Título'],
+  ['SUBTITULO', 'Entidade'],
+  ['ORGAO SUPERIOR', 'Órgão superior'],
+  ['EXERCICIO', 'Exercício'],
+  ['PERIODO', 'Período'],
+  ['EMISSAO', 'Emissão'],
+])
+
+function classifyReportRow(cells: string[]): ParsedReportRow['kind'] {
+  const filled = cells.filter((cell) => cell !== '')
+  const normalized = filled.map(normalizeLabel)
+  const first = filled[0] ?? ''
+  const firstNormalized = normalized[0] ?? ''
+  const hasFinancialValue = filled.some((cell) => cell === '-' || /^-?[\d,]+\.\d{2}$/.test(cell))
+
+  if (filled.length <= 2 && !hasFinancialValue && filled.some((cell) => /[A-Za-zÀ-ÿ]/.test(cell))) {
+    return 'section'
+  }
+
+  if (
+    normalized.some((cell) =>
+      ['ESPECIFICACAO', 'PREVISAO INICIAL', 'PREVISAO ATUALIZADA', 'RECEITAS REALIZADAS'].includes(cell),
+    ) || (filled.length > 1 && !hasFinancialValue)
+  ) {
+    return 'header'
+  }
+
+  if (
+    /^(TOTAL|SALDO|RESULTADO|SUPERAVIT|DEFICIT)/.test(firstNormalized) ||
+    (/[A-Za-zÀ-ÿ]/.test(first) && first === first.toLocaleUpperCase('pt-BR'))
+  ) {
+    return 'total'
+  }
+
+  return 'data'
+}
+
+/**
+ * Le os relatorios contabeis do SIAFI sem misturar metadados com a grade contabil.
+ * As planilhas usam muitas colunas vazias como espacadores e mudam essas posicoes entre
+ * Receita, Despesa e anexos. Cada linha vira sua sequencia de celulas uteis; titulos de
+ * secao recebem `colSpan` no frontend para conservar os blocos lado a lado.
+ */
+export function parseFinancialReport(
+  buffer: Buffer,
+  format: Extract<SpreadsheetFormat, 'CSV' | 'XLSX'>,
+  maxRows: number,
+): ParsedFinancialReport {
+  if (buffer.length === 0) throw new SpreadsheetParseError('empty_file', 'Arquivo vazio')
+  const grid = readGrid(buffer, format)
+
+  let title = 'Demonstrativo contábil'
+  const metadata: ParsedReportMetadata[] = []
+  let bodyStart = 0
+
+  for (let rowIndex = 0; rowIndex < grid.length; rowIndex += 1) {
+    const row = grid[rowIndex] ?? []
+    const unitsCell = row.find((cell) => normalizeLabel(cell) === 'VALORES EM UNIDADES DE REAL')
+    if (unitsCell !== undefined) {
+      metadata.push({ label: 'Unidade', value: 'Valores em unidades de real' })
+      bodyStart = rowIndex + 1
+      break
+    }
+
+    for (let cellIndex = 0; cellIndex < row.length; cellIndex += 1) {
+      const cell = row[cellIndex] ?? ''
+      const displayLabel = REPORT_METADATA_LABELS.get(normalizeLabel(cell))
+      if (!displayLabel) continue
+      const value = row.slice(cellIndex + 1).find((candidate) => candidate !== '')
+      if (!value) continue
+      if (displayLabel === 'Título') title = value
+      else metadata.push({ label: displayLabel, value })
+      bodyStart = rowIndex + 1
+      break
+    }
+  }
+
+  const body = grid.slice(bodyStart).filter((row) => !isEmptyRow(row))
+  if (body.length === 0) throw new SpreadsheetParseError('empty_file', 'Relatório sem linhas contábeis')
+
+  const allRows = body.map((row) => row.filter((cell) => cell !== ''))
+  const columnCount = Math.max(...allRows.map((row) => row.length))
+  const rows = allRows.slice(0, maxRows).map((cells) => ({ cells, kind: classifyReportRow(cells) }))
+
+  return {
+    title,
+    metadata,
+    rows,
+    columnCount,
+    totalRowCount: allRows.length,
+    truncated: allRows.length > rows.length,
+  }
 }
 
 /** Formatos que o parser le. Mais amplo que o catalogo de hoje (CSV/JSON) de proposito: as

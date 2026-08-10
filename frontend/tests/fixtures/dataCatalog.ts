@@ -2,7 +2,7 @@ import type { Dataset, DatasetEdition, SourceSystem } from "@/types/dataCatalog"
 
 /**
  * Catalogo de mentira, com a MESMA forma do real: um conjunto de serie continua (arquivos
- * tabulares, com preview) e um com varios exercicios (relatorios, so download). O catalogo
+ * tabulares) e um com varios exercicios (relatorios), ambos com preview. O catalogo
  * de verdade agora vive no backend e e testado la — aqui o que se prova e busca e UI.
  */
 

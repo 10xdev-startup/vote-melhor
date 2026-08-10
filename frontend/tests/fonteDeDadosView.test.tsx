@@ -35,6 +35,7 @@ const getCatalog = dataCatalogService.getCatalog as unknown as MockFn<Dataset[]>
 const getFilePreview = dataCatalogService.getFilePreview as unknown as MockFn<FilePreview>
 
 const PREVIEW: FilePreview = {
+  layout: "tabular",
   fileId: "receitas-csv",
   columns: ["Data da carga", "Órgão Superior", "Receita Arrecadada"],
   rows: [["09/08/26", "02000 - SENADO FEDERAL", "2483,60"]],
@@ -42,6 +43,24 @@ const PREVIEW: FilePreview = {
   totalRowCount: 1234,
   columnTotals: { "Receita Arrecadada": 13483.6 },
   truncated: true,
+}
+
+const REPORT_PREVIEW: FilePreview = {
+  layout: "report",
+  fileId: "demonstracoes-2025-bp",
+  title: "BALANÇO PATRIMONIAL - TODOS OS ORÇAMENTOS",
+  metadata: [
+    { label: "Exercício", value: "2025" },
+    { label: "Unidade", value: "Valores em unidades de real" },
+  ],
+  rows: [
+    { cells: ["ATIVO", "PASSIVO"], kind: "section" },
+    { cells: ["Caixa e Equivalentes de Caixa", "1,300,705,195.95", "Obrigações", "255,493,108.07"], kind: "data" },
+  ],
+  columnCount: 4,
+  rowCount: 2,
+  totalRowCount: 2,
+  truncated: false,
 }
 
 beforeEach(() => {
@@ -89,11 +108,10 @@ describe("FonteDeDadosView", () => {
     expect(screen.getByText("3 de 8 arquivos")).toBeInTheDocument()
   })
 
-  it("oferece Ver só nos arquivos tabulares", async () => {
+  it("oferece Ver nos arquivos tabulares e nos demonstrativos contábeis", async () => {
     await renderView()
-    // Os 2 do Arquimedes tem preview; os relatorios contabeis do exercicio aberto, nao.
-    expect(screen.getAllByRole("button", { name: /Ver/ })).toHaveLength(2)
-    // O relatório contábil tem download, mas não tem Ver.
+    // Dois arquivos do Arquimedes + dois demonstrativos do exercício aberto na fixture.
+    expect(screen.getAllByRole("button", { name: /Ver/ })).toHaveLength(4)
     expect(screen.getByLabelText("Baixar Balanço Patrimonial")).toBeInTheDocument()
   })
 
@@ -109,6 +127,10 @@ describe("FonteDeDadosView", () => {
     expect(screen.getByText("2483,60")).toBeInTheDocument()
     expect(screen.getByText("Total: R$ 13.483,60")).toBeInTheDocument()
     expect(screen.getByText(/Primeiras 1 de 1\.234 linhas · 3 colunas/)).toBeInTheDocument()
+    expect(screen.getByText("2483,60").closest("table")?.parentElement).toHaveClass(
+      "max-h-[32rem]",
+      "overflow-auto"
+    )
   })
 
   it("não busca de novo ao fechar e reabrir", async () => {
@@ -123,6 +145,23 @@ describe("FonteDeDadosView", () => {
 
     await waitFor(() => expect(screen.getByText("Órgão Superior")).toBeInTheDocument())
     expect(getFilePreview).toHaveBeenCalledTimes(1)
+  })
+
+  it("exibe o demonstrativo contábil preservando os blocos e pede até 200 linhas", async () => {
+    getFilePreview.mockResolvedValue(REPORT_PREVIEW)
+    await renderView()
+
+    fireEvent.click(screen.getAllByRole("button", { name: /Ver/ })[2]!)
+
+    expect(await screen.findAllByText("BALANÇO PATRIMONIAL - TODOS OS ORÇAMENTOS")).toHaveLength(2)
+    expect(screen.getByText("ATIVO")).toBeInTheDocument()
+    expect(screen.getByText("PASSIVO")).toBeInTheDocument()
+    expect(screen.getByText("1,300,705,195.95")).toBeInTheDocument()
+    expect(screen.getByText("1,300,705,195.95").closest("table")?.parentElement).toHaveClass(
+      "max-h-[32rem]",
+      "overflow-auto"
+    )
+    expect(getFilePreview).toHaveBeenCalledWith("demonstracoes-2025-bp", 200)
   })
 
   it("falhando o preview, explica em termos de ver — não de baixar", async () => {

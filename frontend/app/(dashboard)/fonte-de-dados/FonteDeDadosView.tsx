@@ -89,10 +89,10 @@ function SourceSystemInfo({ system }: { system: SourceSystem }) {
 }
 
 /** A tabela do preview. Rola na horizontal: os arquivos do governo passam de 19 colunas. */
-function PreviewTable({ preview }: { preview: FilePreview }) {
+function TabularPreview({ preview }: { preview: Extract<FilePreview, { layout: 'tabular' }> }) {
   return (
     <div className="border-t bg-muted/20 px-4 py-3">
-      <div className="max-w-full overflow-x-auto rounded border bg-background">
+      <div className="max-h-[32rem] max-w-full overflow-auto rounded border bg-background">
         <table className="w-full border-collapse text-xs">
           <thead>
             <tr className={ACCENT.header}>
@@ -100,7 +100,7 @@ function PreviewTable({ preview }: { preview: FilePreview }) {
                 <th
                   key={`${column}-${index}`}
                   scope="col"
-                  className="whitespace-nowrap border-b px-3 py-2 text-left font-semibold"
+                  className="sticky top-0 z-10 whitespace-nowrap border-b bg-sky-50 px-3 py-2 text-left font-semibold dark:bg-sky-950"
                 >
                   {preview.columnTotals[column] !== undefined && (
                     <span className="mb-0.5 block text-[11px] font-bold text-foreground">
@@ -134,6 +134,84 @@ function PreviewTable({ preview }: { preview: FilePreview }) {
   )
 }
 
+function isReportValue(value: string): boolean {
+  return value === '-' || /^-?(?:\d{1,3}(?:,\d{3})*|\d+)(?:\.\d{2})?$/.test(value)
+}
+
+function reportCellSpan(columnCount: number, cellCount: number, cellIndex: number): number {
+  const base = Math.floor(columnCount / cellCount)
+  return base + (cellIndex < columnCount % cellCount ? 1 : 0)
+}
+
+/**
+ * Demonstrativos do SIAFI usam celulas vazias para posicionar blocos lado a lado. O backend
+ * remove so as colunas inteiramente vazias; esta grade conserva o arranjo contabil restante.
+ */
+function FinancialReportPreview({ preview }: { preview: Extract<FilePreview, { layout: 'report' }> }) {
+  return (
+    <div className="border-t bg-muted/20 px-4 py-3">
+      <div className="mb-3">
+        <p className="text-xs font-semibold text-foreground">{preview.title}</p>
+        <dl className="mt-1.5 flex flex-wrap gap-x-5 gap-y-1 text-[11px] text-muted-foreground">
+          {preview.metadata.map((item) => (
+            <div key={item.label} className="flex gap-1">
+              <dt className="text-muted-foreground/70">{item.label}</dt>
+              <dd className="font-medium text-foreground/75">{item.value}</dd>
+            </div>
+          ))}
+        </dl>
+      </div>
+
+      <div className="max-h-[32rem] max-w-full overflow-auto rounded border bg-background">
+        <table className="w-max min-w-full border-collapse text-xs">
+          <caption className="sr-only">{preview.title}</caption>
+          <tbody>
+            {preview.rows.map((row, rowIndex) => (
+              <tr
+                key={rowIndex}
+                className={cn(
+                  'border-b last:border-b-0',
+                  row.kind === 'section' && ACCENT.header,
+                  row.kind === 'header' && 'bg-muted/60 font-semibold text-foreground',
+                  row.kind === 'total' && 'bg-muted/25 font-semibold text-foreground',
+                )}
+              >
+                {row.cells.map((cell, cellIndex) => (
+                  <td
+                    key={cellIndex}
+                    colSpan={row.kind === 'section' ? reportCellSpan(preview.columnCount, row.cells.length, cellIndex) : 1}
+                    className={cn(
+                      'min-w-28 whitespace-nowrap px-3 py-1.5 text-muted-foreground',
+                      row.kind !== 'data' && 'text-foreground/85',
+                      isReportValue(cell) && 'text-right font-mono tabular-nums',
+                    )}
+                  >
+                    {cell}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <p className="mt-2 text-xs text-muted-foreground/70">
+        {preview.truncated
+          ? `Primeiras ${preview.rowCount} de ${preview.totalRowCount.toLocaleString('pt-BR')} linhas do demonstrativo.`
+          : `${preview.totalRowCount.toLocaleString('pt-BR')} linhas · ${preview.columnCount} colunas úteis.`}
+      </p>
+    </div>
+  )
+}
+
+function FilePreviewContent({ preview }: { preview: FilePreview }) {
+  return preview.layout === 'report' ? (
+    <FinancialReportPreview preview={preview} />
+  ) : (
+    <TabularPreview preview={preview} />
+  )
+}
+
 function FileRow({ file }: { file: DataFile }) {
   const Icon = file.format === 'JSON' ? FileJson : FileSpreadsheet
   const [open, setOpen] = useState(false)
@@ -153,13 +231,13 @@ function FileRow({ file }: { file: DataFile }) {
     setLoading(true)
     setError(null)
     try {
-      setPreview(await dataCatalogService.getFilePreview(file.id))
+      setPreview(await dataCatalogService.getFilePreview(file.id, file.layout === 'report' ? 200 : undefined))
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro inesperado ao ler o arquivo')
     } finally {
       setLoading(false)
     }
-  }, [open, preview, loading, file.id])
+  }, [open, preview, loading, file.id, file.layout])
 
   return (
     <div>
@@ -180,22 +258,19 @@ function FileRow({ file }: { file: DataFile }) {
 
         <span className="shrink-0 text-xs tabular-nums text-muted-foreground/70">{formatBytes(file.sizeInBytes)}</span>
 
-        {/* Só arquivo tabular tem preview — relatório do Tesouro numa grade não fica legível. */}
-        {file.layout === 'tabular' && (
-          <button
-            type="button"
-            onClick={() => void toggle()}
-            aria-expanded={open}
-            className={cn(
-              'flex shrink-0 items-center gap-1.5 rounded border px-2 py-1 text-xs font-medium text-muted-foreground transition-colors',
-              ACCENT.step
-            )}
-          >
-            {loading ? <Loader2 className="size-3.5 animate-spin" /> : <Table2 className="size-3.5" />}
-            Ver
-            <ChevronDown className={cn('size-3 transition-transform', open && 'rotate-180')} />
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={() => void toggle()}
+          aria-expanded={open}
+          className={cn(
+            'flex shrink-0 items-center gap-1.5 rounded border px-2 py-1 text-xs font-medium text-muted-foreground transition-colors',
+            ACCENT.step
+          )}
+        >
+          {loading ? <Loader2 className="size-3.5 animate-spin" /> : <Table2 className="size-3.5" />}
+          Ver
+          <ChevronDown className={cn('size-3 transition-transform', open && 'rotate-180')} />
+        </button>
 
         <a
           href={file.url}
@@ -227,7 +302,7 @@ function FileRow({ file }: { file: DataFile }) {
               <p className="mt-1 text-muted-foreground">{error}</p>
             </div>
           )}
-          {preview && <PreviewTable preview={preview} />}
+          {preview && <FilePreviewContent preview={preview} />}
         </>
       )}
     </div>

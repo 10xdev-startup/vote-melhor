@@ -1,5 +1,5 @@
 import { describe, it, expect } from '@jest/globals'
-import { parseSpreadsheet, SpreadsheetParseError } from '@/utils/parseSpreadsheet'
+import { parseFinancialReport, parseSpreadsheet, SpreadsheetParseError } from '@/utils/parseSpreadsheet'
 
 /**
  * Fixtures montadas por bytes, sem rede: o que se prova aqui e que o conteudo do governo
@@ -105,5 +105,40 @@ describe('parseSpreadsheet — JSON', () => {
 
   it('recusa JSON sem lista de registros', () => {
     expect(() => parseSpreadsheet(utf8('{"total":3}'), 'JSON', 10)).toThrow(SpreadsheetParseError)
+  })
+})
+
+describe('parseFinancialReport — demonstrativo contábil', () => {
+  const report = [
+    ['', 'TITULO', '', '', '', 'BALANÇO PATRIMONIAL - TODOS OS ORÇAMENTOS'].join(';'),
+    ['', 'ORGÃO SUPERIOR', '', '', '', '2000 - SENADO FEDERAL'].join(';'),
+    ['', 'EXERCÍCIO', '', '', '', '2025'].join(';'),
+    ['', 'VALORES EM UNIDADES DE REAL'].join(';'),
+    '',
+    ['', 'ATIVO', '', '', '', 'PASSIVO'].join(';'),
+    ['', 'ESPECIFICAÇÃO', '', '2025', '', 'ESPECIFICAÇÃO', '', '2025'].join(';'),
+    ['', 'Caixa e Equivalentes de Caixa', '', '1,300,705,195.95', '', 'Obrigações', '', '255,493,108.07'].join(';'),
+  ].join('\n')
+
+  it('separa metadados e preserva a posição relativa de Ativo e Passivo', () => {
+    const out = parseFinancialReport(utf8(report), 'CSV', 10)
+
+    expect(out.title).toBe('BALANÇO PATRIMONIAL - TODOS OS ORÇAMENTOS')
+    expect(out.metadata).toContainEqual({ label: 'Exercício', value: '2025' })
+    expect(out.metadata).toContainEqual({ label: 'Unidade', value: 'Valores em unidades de real' })
+    expect(out.rows[0]?.cells).toEqual(['ATIVO', 'PASSIVO'])
+    expect(out.rows[2]?.cells).toEqual([
+      'Caixa e Equivalentes de Caixa',
+      '1,300,705,195.95',
+      'Obrigações',
+      '255,493,108.07',
+    ])
+  })
+
+  it('informa o total de linhas mesmo quando o relatório é cortado', () => {
+    const out = parseFinancialReport(utf8(report), 'CSV', 1)
+    expect(out.rows).toHaveLength(1)
+    expect(out.totalRowCount).toBe(3)
+    expect(out.truncated).toBe(true)
   })
 })

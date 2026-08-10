@@ -33,13 +33,18 @@ Tres coisas foram verificadas nos arquivos reais e definem o trabalho:
 ## Solucao
 
 Preview inline dos **4 arquivos do Arquimedes**, servido por um endpoint do backend que
-baixa, decodifica e parseia. Os 36 contabeis continuam so com download.
+baixa, decodifica e parseia.
+
+Entregue em duas etapas: primeiro os 4 arquivos tabulares do Arquimedes, depois os 36
+demonstrativos contabeis com um renderer proprio (Fase 7) — a etapa que o levantamento ja
+previa, porque grade generica neles nao seria mais legivel que o CSV cru.
 
 Decisoes tomadas com o dev:
 
 | Decisao | Escolha | Motivo |
 | --- | --- | --- |
-| Escopo | So os 4 do Arquimedes | Sao os unicos tabulares; grade generica nos contabeis nao seria mais legivel que o CSV cru |
+| Escopo (etapa 1) | Os 4 do Arquimedes | Sao os unicos tabulares; entregam valor com um viewer simples |
+| Escopo (etapa 2) | Os 36 contabeis, com renderer proprio | Grade generica neles nao seria mais legivel que o CSV cru — precisavam entender o formato BGU |
 | Catalogo | Migra para o backend | Elimina SSRF por construcao (o backend so busca URL que ele mesmo conhece) e ja e pra onde o crawler vai |
 | Parser | `xlsx@0.18.5` do npm | Alinhado com a 10x-mkt; cobre `.xlsx` que TSE/Transparencia vao trazer |
 | Download | `node:https`, nao `fetch` | O `fetch` global estoura `UND_ERR_CONNECT_TIMEOUT` com `www.senado.gov.br`: o handshake TLS 1.3 nao conclui. Detalhe completo em `investigacao-tls-senado.md` |
@@ -52,7 +57,8 @@ Se um dia entrar upload, essa premissa cai e a versao precisa ser revista.
 
 **Por que `layout` e campo do modelo:** o que decide se a linha tem preview nao e capacidade
 tecnica (o parser le os 36 contabeis sem erro) — e o formato. `layout: 'tabular' | 'report'`
-diz isso explicitamente, e e o gancho do renderizador de BGU na fase 3, em vez de um
+diz isso explicitamente, e foi o gancho que permitiu o renderer de BGU entrar depois sem
+remodelar nada, em vez de um
 `previewable: boolean` que esconde o motivo.
 
 ---
@@ -66,6 +72,7 @@ Fase 3: controller + rotas (GET /data-sources, GET /data-sources/files/:id/previ
 Fase 4: frontend consome a API (service + view com loading)
 Fase 5: preview inline na linha
 Fase 6: smoke test
+Fase 7: renderer proprio para os 36 demonstrativos contabeis
 ```
 
 ---
@@ -148,7 +155,7 @@ rede), provando que o acento sobrevive nos dois.
 1. A linha deixa de ser um `<a>` unico: vira container com **Ver** (button) e **Baixar**
    (link) — `<button>` dentro de `<a>` e HTML invalido.
 2. **Ver** expande a tabela abaixo da linha, com as colunas e as primeiras linhas.
-3. Linha `report` nao mostra **Ver**.
+3. Nesta etapa, linha `report` ainda nao mostra **Ver** (liberado na Fase 7).
 
 **Validacao parcial:** clicar em Ver em "Receitas próprias (planilha)" mostra a tabela com
 acento correto; nos contabeis o botao nao existe.
@@ -178,6 +185,38 @@ Regras da soma, em `parseSpreadsheet.ts`:
 
 **Validacao parcial:** com o arquivo real de 10/08/2026 — 929 registros, total arrecadado
 `R$ 155.567.875,30`.
+
+---
+
+### Fase 7 — Renderer dos demonstrativos contabeis
+
+**Objetivo:** os 36 relatorios do Tesouro deixarem de ser so download.
+
+Era a etapa que o levantamento inicial ja previa: os arquivos tem estrutura identica entre si
+e sao pequenos (3–17 KB), entao valia um renderer que entenda o formato BGU em vez de uma
+grade generica.
+
+`FilePreview` virou **union discriminada** por `layout`, em vez de um shape unico com campos
+opcionais — o frontend passa a escolher o componente pelo discriminante, e o TypeScript cobra
+o tratamento dos dois casos:
+
+```ts
+type FilePreview = TabularFilePreview | ReportFilePreview
+```
+
+O `ReportFilePreview` carrega o que a grade jogava fora:
+
+- `title` e `metadata` — o preambulo institucional (orgao, exercicio, periodo, emissao) sai
+  das primeiras 13 linhas e vira cabecalho legivel, em vez de linhas `;;;;` no meio da tabela;
+- `rows[].kind` (`section` | `header` | `total` | `data`) — a hierarquia que no CSV existia so
+  como indentacao por espaco passa a ser explicita;
+- `columnCount` — a grade tem largura variavel, e ATIVO/PASSIVO ficam lado a lado como no
+  documento oficial.
+
+**Validacao:** os 36 demonstrativos reais de 2020 a 2025 abertos e conferidos; scroll vertical
+e horizontal dentro do viewer, com os metadados fixos.
+
+**Commit sugerido:** `feat(fonte-de-dados): renderiza os demonstrativos contabeis do Tesouro`
 
 ---
 

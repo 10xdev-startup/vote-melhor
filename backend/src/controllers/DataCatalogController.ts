@@ -1,6 +1,6 @@
 import type { Request, Response } from 'express'
 import { DataCatalogModel } from '@/models/DataCatalogModel'
-import { parseSpreadsheet, SpreadsheetParseError } from '@/utils/parseSpreadsheet'
+import { parseFinancialReport, parseSpreadsheet, SpreadsheetParseError } from '@/utils/parseSpreadsheet'
 import { sendOk } from '@/utils/apiResponse'
 import { AppError } from '@/utils/AppError'
 import { fetchSourceFile } from '@/utils/fetchSourceFile'
@@ -37,19 +37,33 @@ export const DataCatalogController = {
     const file = DataCatalogModel.findFileById(fileId)
     if (!file) throw new AppError(404, 'Arquivo não encontrado no catálogo', 'FILE_NOT_FOUND')
 
-    if (file.layout === 'report') {
-      throw new AppError(
-        422,
-        'Este arquivo é um relatório formatado, não uma tabela — baixe para visualizar',
-        'LAYOUT_NOT_PREVIEWABLE'
-      )
-    }
-
     const buffer = await fetchSourceFile(file.url)
 
     try {
+      if (file.layout === 'report') {
+        if (file.format !== 'CSV') {
+          throw new AppError(422, 'Formato de relatório ainda não suportado', 'REPORT_FORMAT_UNSUPPORTED')
+        }
+
+        const parsed = parseFinancialReport(buffer, file.format, resolveLimit(req.query['limit']))
+        const preview: FilePreview = {
+          layout: 'report',
+          fileId: file.id,
+          title: parsed.title,
+          metadata: parsed.metadata,
+          rows: parsed.rows,
+          columnCount: parsed.columnCount,
+          rowCount: parsed.rows.length,
+          totalRowCount: parsed.totalRowCount,
+          truncated: parsed.truncated,
+        }
+        sendOk(res, preview)
+        return
+      }
+
       const parsed = parseSpreadsheet(buffer, file.format, resolveLimit(req.query['limit']))
       const preview: FilePreview = {
+        layout: 'tabular',
         fileId: file.id,
         columns: parsed.columns,
         rows: parsed.rows,

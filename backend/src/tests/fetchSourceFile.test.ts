@@ -30,17 +30,28 @@ function mockResponse(statusCode: number, body = ''): void {
 }
 
 describe('fetchSourceFile', () => {
-  it('forca TLS 1.2 apenas no host afetado e devolve os bytes', async () => {
+  it.each(['www.senado.gov.br', 'www12.senado.leg.br'])(
+    'forca TLS 1.2 no host afetado %s e devolve os bytes',
+    async (hostname) => {
+      mockResponse(200, 'conteudo')
+
+      await expect(fetchSourceFile(`https://${hostname}/arquivo.csv`)).resolves.toEqual(
+        Buffer.from('conteudo'),
+      )
+
+      expect(mockedHttpsGet).toHaveBeenCalledWith(
+        expect.any(URL),
+        expect.objectContaining({ maxVersion: 'TLSv1.2' }),
+        expect.any(Function),
+      )
+    },
+  )
+
+  it('devolve os bytes recebidos da origem', async () => {
     mockResponse(200, 'conteudo')
 
     await expect(fetchSourceFile('https://www.senado.gov.br/arquivo.csv')).resolves.toEqual(
       Buffer.from('conteudo'),
-    )
-
-    expect(mockedHttpsGet).toHaveBeenCalledWith(
-      expect.any(URL),
-      expect.objectContaining({ maxVersion: 'TLSv1.2' }),
-      expect.any(Function),
     )
   })
 
