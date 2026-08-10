@@ -3,6 +3,7 @@ import cors from 'cors'
 import dotenv from 'dotenv'
 import { sendOk } from '@/utils/apiResponse'
 import { userRoutes } from '@/routes/userRoutes'
+import { dataCatalogRoutes } from '@/routes/dataCatalogRoutes'
 import { errorHandler } from '@/middleware'
 
 // Unico ponto de carga da env no backend.
@@ -26,6 +27,10 @@ app.get('/health', (_req, res) => {
 
 // Dominio de referencia: usuario (Controller → Model → Database).
 app.use('/users', userRoutes)
+
+// Catalogo de dados abertos: lista os arquivos publicados pelos orgaos e serve a amostra
+// do conteudo (os arquivos do governo nao tem CORS, entao o browser depende deste proxy).
+app.use('/data-sources', dataCatalogRoutes)
 
 // Handler de erro central — por ULTIMO, depois das rotas (serializa AppError no envelope).
 app.use(errorHandler)
