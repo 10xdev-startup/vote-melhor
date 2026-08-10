@@ -1,0 +1,102 @@
+/** Formato em que o orgao publica o arquivo. */
+export type DataFileFormat = "CSV" | "JSON"
+
+/**
+ * Como o conteudo do arquivo e organizado — nao e capacidade tecnica, e formato.
+ *
+ * `tabular`: uma linha por registro, com cabecalho. Da pra mostrar como tabela.
+ * `report`: relatorio formatado. Os demonstrativos contabeis do Tesouro sao assim —
+ * preambulo institucional e balanco de duas colunas lado a lado (ATIVO x PASSIVO). O parser
+ * le sem erro, mas jogar isso numa grade nao fica mais legivel que o CSV cru, entao esses
+ * ficam so com download ate existir um renderizador que entenda o formato.
+ */
+export type DataFileLayout = "tabular" | "report"
+
+/**
+ * Um arquivo publicado por um orgao oficial — a menor unidade do catalogo.
+ *
+ * `name` e `description` sao curadoria da 10xGov: o portal de origem rotula todos os
+ * arquivos como "CSV" e esconde o conteudo real dentro do nome do arquivo
+ * (`BGUBPAnualOrgao2000OrgSup.csv`). `url` continua apontando para o dominio oficial —
+ * a 10xGov nunca re-hospeda o arquivo.
+ */
+export interface DataFile {
+  id: string
+  name: string
+  description: string
+  format: DataFileFormat
+  layout: DataFileLayout
+  url: string
+  /** Tamanho em bytes medido na coleta; `null` quando o orgao nao informa. */
+  sizeInBytes: number | null
+}
+
+/**
+ * Uma edicao do conjunto — tipicamente um exercicio.
+ *
+ * O portal publica cada exercicio como se fosse um conjunto novo, mas os arquivos sao os
+ * mesmos seis demonstrativos todo ano. Modelar como edicao deixa a UI navegar por ano em
+ * vez de repetir o mesmo conjunto seis vezes. Series continuas tem uma edicao so.
+ */
+export interface DatasetEdition {
+  id: string
+  /** Rotulo do seletor, ex.: "2025" ou "Desde 2013". */
+  label: string
+  /** Exercicio da edicao, ou `null` quando e serie continua. */
+  year: number | null
+  /** Ultima atualizacao declarada pelo orgao para esta edicao (ISO 8601). */
+  updatedAt: string
+  files: DataFile[]
+}
+
+/**
+ * O sistema de onde o dado sai.
+ *
+ * O portal publica so a sigla ("SIAFI", "Arquimedes"), que nao diz nada a quem chega de
+ * fora — e o mesmo problema do arquivo chamado "CSV", um nivel acima. A descricao e
+ * descritiva por contrato (o que o sistema e, quem mantem), nunca interpretativa, e
+ * `referenceUrl` aponta a pagina oficial que a sustenta.
+ */
+export interface SourceSystem {
+  /** Sigla como o orgao publica, ex.: "SIAFI". */
+  name: string
+  description: string
+  referenceUrl: string
+}
+
+/** Conjunto de dados: arquivos que compartilham origem, periodicidade e area responsavel. */
+export interface Dataset {
+  id: string
+  title: string
+  description: string
+  /** Orgao publicador, ex.: "Senado Federal". */
+  organ: string
+  /** Grupo dentro do portal do orgao, ex.: "Orcamento do Senado". */
+  group: string
+  sourceSystem: SourceSystem
+  /** Periodicidade declarada pelo orgao, ex.: "Anual". */
+  updateFrequency: string
+  /** Area responsavel dentro do orgao. */
+  maintainer: string
+  /** Pagina oficial que sustenta estes metadados — procedencia obrigatoria. */
+  officialUrl: string
+  /** Data em que a 10xGov leu a pagina oficial (ISO 8601). */
+  collectedAt: string
+  /** Em ordem cronologica crescente: a UI abre na ultima (mais recente). */
+  editions: DatasetEdition[]
+}
+
+/** Amostra do conteudo de um arquivo, lida na hora a partir da fonte oficial. */
+export interface FilePreview {
+  fileId: string
+  columns: string[]
+  rows: string[][]
+  /** Linhas devolvidas nesta amostra. */
+  rowCount: number
+  /** Total de linhas de dados no arquivo, sem contar o cabecalho. */
+  totalRowCount: number
+  /** Totais monetarios do arquivo inteiro, indexados pelo nome da coluna. */
+  columnTotals: Record<string, number>
+  /** `true` quando o arquivo tem mais linhas do que as devolvidas. */
+  truncated: boolean
+}
