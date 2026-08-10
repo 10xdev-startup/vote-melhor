@@ -449,6 +449,34 @@ perdido foi o commit que ainda nao tinha subido.
 
 ---
 
+## Ambiente: falha de sandbox que se disfarca de bug da aplicacao
+
+Tambem nao e licao de template, mas custou uma investigacao inteira na sessao da Fonte de
+dados (10/08/2026).
+
+**Sintoma:** `next/jest` parecia quebrado — `--showConfig` devolvia **stdout vazio**, sem erro
+legivel, e a suite parecia nao rodar.
+
+**Causa raiz:** o Next sobe o TypeScript como **subprocesso**. Num sandbox sem permissao pra
+isso, o spawn falha com `EPERM` e a saida volta vazia. A aplicacao estava intacta: reexecutado
+fora da restricao, tudo passa.
+
+**Por que engana:** o erro nao aparece como "permissao negada". Aparece como ausencia — saida
+vazia, config sumida, teste que "nao roda". A leitura natural e culpar a configuracao do
+projeto e sair mexendo em `jest.config.mjs`, que e justamente onde nao esta o problema.
+
+**Regra:** ferramenta que gera subprocesso (`next`, `tsc`, `eslint`) voltando **vazia** ou com
+`EPERM` e suspeita de ambiente ate prova em contrario. Confirme por outro caminho antes de
+"consertar" o projeto — rodar o comando direto, ou o teste por um atalho que nao dependa do
+subprocesso.
+
+**Varia por sandbox, nao e propriedade do repo:** na sessao do Claude Code o
+`npx jest --showConfig` funcionou normalmente (foi assim que se leu o `moduleNameMapper`);
+o `EPERM` apareceu so no sandbox do Codex. Entao o sintoma nao reproduz igual em todo agente —
+o que se generaliza e a regra de diagnostico, nao o erro.
+
+---
+
 ## O fluxo que queremos no proximo projeto
 
 Hoje, do clone ao primeiro deploy: **~1h30**. Com os itens acima resolvidos, o caminho vira:
