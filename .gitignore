@@ -15,3 +15,4 @@ graphify-out/.graphify_*
 # Snapshots datados: ~8 MB por build, duplicata do graph.json atual.
 graphify-out/[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]/
 .gstack/
+.firecrawl/
