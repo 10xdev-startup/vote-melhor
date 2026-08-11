@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { Suspense } from 'react'
 import { FonteDeDadosView } from './FonteDeDadosView'
 
 export const metadata: Metadata = {
@@ -9,7 +10,9 @@ export const metadata: Metadata = {
 export default function FonteDeDadosPage() {
   return (
     <div className="p-2">
-      <FonteDeDadosView />
+      <Suspense fallback={null}>
+        <FonteDeDadosView />
+      </Suspense>
     </div>
   )
 }
