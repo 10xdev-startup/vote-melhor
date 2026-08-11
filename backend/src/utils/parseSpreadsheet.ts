@@ -29,10 +29,34 @@ export interface ParsedSpreadsheet {
   rows: string[][]
   /** Total de registros no arquivo, sem contar o cabecalho. */
   totalRowCount: number
+  unfilteredRowCount: number
+  appliedFilters: SpreadsheetFilter[]
+  facets: SpreadsheetFacet[]
   /** Totais monetarios calculados sobre o arquivo inteiro, indexados pelo nome da coluna. */
   columnTotals: Record<string, number>
   /** `true` quando o arquivo tem mais linhas do que as devolvidas. */
   truncated: boolean
+}
+
+export interface SpreadsheetExactFilter {
+  column: string
+  operator: 'equals'
+  value: string
+}
+
+export interface SpreadsheetRangeFilter {
+  column: string
+  operator: 'range'
+  min?: string
+  max?: string
+}
+
+export type SpreadsheetFilter = SpreadsheetExactFilter | SpreadsheetRangeFilter
+
+export interface SpreadsheetFacet {
+  column: string
+  options: Array<{ value: string; count: number }>
+  totalDistinctValues: number
 }
 
 export interface ParsedReportMetadata {
@@ -56,7 +80,12 @@ export interface ParsedFinancialReport {
 
 // Somar uma coluna exige conhecer sua semantica. Nao tente totalizar todo numero do arquivo:
 // ano, mes e codigo de natureza tambem parecem numericos, mas a soma deles nao tem sentido.
-const TOTALLED_CURRENCY_COLUMNS = new Set(['Receita Arrecadada'])
+const CURRENCY_COLUMN_PATTERN = /\b(VALOR|DOTACAO|EMPENHAD[OA]|LIQUIDAD[OA]|PAG[OA]|PAGAMENTO|RECEITA|DESPESA|PREVISAO|ARRECADAD[OA]|SALDO)\b/
+
+function isCurrencyColumn(column: string): boolean {
+  const normalized = column.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase()
+  return CURRENCY_COLUMN_PATTERN.test(normalized)
+}
 
 function parseBrazilianCurrencyToCents(value: string): number | undefined {
   const compact = value.trim().replace(/^R\$\s*/, '').replace(/\s/g, '')
@@ -78,7 +107,7 @@ function buildColumnTotals(columns: string[], rows: string[][]): Record<string, 
   const totals: Record<string, number> = {}
 
   columns.forEach((column, columnIndex) => {
-    if (!TOTALLED_CURRENCY_COLUMNS.has(column)) return
+    if (!isCurrencyColumn(column)) return
 
     let totalInCents = 0
     for (const row of rows) {
@@ -91,6 +120,48 @@ function buildColumnTotals(columns: string[], rows: string[][]): Record<string, 
   })
 
   return totals
+}
+
+function applyFilters(columns: string[], rows: string[][], filters: SpreadsheetFilter[]): { rows: string[][]; filters: SpreadsheetFilter[] } {
+  const indexes = new Map(columns.map((column, index) => [column, index]))
+  const validFilters = filters.filter((filter) => {
+    if (!indexes.has(filter.column)) return false
+    if (filter.operator === 'equals') return filter.value !== ''
+    if (!isCurrencyColumn(filter.column) || (!filter.min && !filter.max)) return false
+    return (!filter.min || parseBrazilianCurrencyToCents(filter.min) !== undefined) && (!filter.max || parseBrazilianCurrencyToCents(filter.max) !== undefined)
+  })
+  return {
+    rows: rows.filter((row) => validFilters.every((filter) => {
+      const cell = row[indexes.get(filter.column)!] ?? ''
+      if (filter.operator === 'equals') return cell === filter.value
+      const cellValue = parseBrazilianCurrencyToCents(cell)
+      if (cellValue === undefined) return false
+      const min = filter.min ? parseBrazilianCurrencyToCents(filter.min) : undefined
+      const max = filter.max ? parseBrazilianCurrencyToCents(filter.max) : undefined
+      return (min === undefined || cellValue >= min) && (max === undefined || cellValue <= max)
+    })),
+    filters: validFilters,
+  }
+}
+
+function buildFacets(columns: string[], rows: string[][], filters: SpreadsheetFilter[]): SpreadsheetFacet[] {
+  return columns.map((column, columnIndex) => {
+    const contextualFilters = filters.filter((filter) => filter.column !== column)
+    const contextualRows = applyFilters(columns, rows, contextualFilters).rows
+    const counts = new Map<string, number>()
+    contextualRows.forEach((row) => {
+      const value = row[columnIndex] ?? ''
+      if (value !== '') counts.set(value, (counts.get(value) ?? 0) + 1)
+    })
+    const allOptions = [...counts].sort(([leftValue, leftCount], [rightValue, rightCount]) =>
+      rightCount - leftCount || leftValue.localeCompare(rightValue, 'pt-BR'),
+    )
+    return {
+      column,
+      options: allOptions.map(([value, count]) => ({ value, count })),
+      totalDistinctValues: allOptions.length,
+    }
+  })
 }
 
 /**
@@ -144,13 +215,16 @@ function findHeaderIndex(rows: string[][]): number {
   return 0
 }
 
-function buildTable(grid: string[][], maxRows: number): ParsedSpreadsheet {
+function buildTable(grid: string[][], maxRows: number, offset: number, filters: SpreadsheetFilter[]): ParsedSpreadsheet {
   const headerIndex = findHeaderIndex(grid)
   const header = grid[headerIndex] ?? []
   const columns = header.map((cell, position) => (cell === '' ? `Coluna ${position + 1}` : cell))
 
-  const body = grid.slice(headerIndex + 1).filter((row) => !isEmptyRow(row))
-  const rows = body.slice(0, maxRows).map((row) => {
+  const body = grid.slice(headerIndex + 1).filter((row) => !isEmptyRow(row)).map((row) =>
+    columns.map((_column, position) => row[position] ?? ''),
+  )
+  const filtered = applyFilters(columns, body, filters)
+  const rows = filtered.rows.slice(offset, offset + maxRows).map((row) => {
     // Normaliza a largura: linha curta vira celula vazia, e o excedente e cortado, senao
     // a tabela do frontend desalinha.
     const normalized = columns.map((_column, position) => row[position] ?? '')
@@ -160,9 +234,12 @@ function buildTable(grid: string[][], maxRows: number): ParsedSpreadsheet {
   return {
     columns,
     rows,
-    totalRowCount: body.length,
-    columnTotals: buildColumnTotals(columns, body),
-    truncated: body.length > rows.length,
+    totalRowCount: filtered.rows.length,
+    unfilteredRowCount: body.length,
+    appliedFilters: filtered.filters,
+    facets: buildFacets(columns, body, filtered.filters),
+    columnTotals: buildColumnTotals(columns, filtered.rows),
+    truncated: offset + rows.length < filtered.rows.length,
   }
 }
 
@@ -184,7 +261,7 @@ function extractRecords(payload: unknown): Record<string, unknown>[] {
   return candidate.filter((item): item is Record<string, unknown> => typeof item === 'object' && item !== null)
 }
 
-function parseJsonRecords(text: string, maxRows: number): ParsedSpreadsheet {
+function parseJsonRecords(text: string, maxRows: number, offset: number, filters: SpreadsheetFilter[]): ParsedSpreadsheet {
   let payload: unknown
   try {
     payload = JSON.parse(text)
@@ -205,13 +282,17 @@ function parseJsonRecords(text: string, maxRows: number): ParsedSpreadsheet {
   })
 
   const allRows = records.map((record) => columns.map((column) => toCell(record[column])))
-  const rows = allRows.slice(0, maxRows)
+  const filtered = applyFilters(columns, allRows, filters)
+  const rows = filtered.rows.slice(offset, offset + maxRows)
   return {
     columns,
     rows,
-    totalRowCount: records.length,
-    columnTotals: buildColumnTotals(columns, allRows),
-    truncated: records.length > rows.length,
+    totalRowCount: filtered.rows.length,
+    unfilteredRowCount: records.length,
+    appliedFilters: filtered.filters,
+    facets: buildFacets(columns, allRows, filtered.filters),
+    columnTotals: buildColumnTotals(columns, filtered.rows),
+    truncated: offset + rows.length < filtered.rows.length,
   }
 }
 
@@ -247,8 +328,8 @@ function readGrid(buffer: Buffer, format: 'CSV' | 'XLSX'): string[][] {
   return normalized
 }
 
-function parseGrid(buffer: Buffer, format: 'CSV' | 'XLSX', maxRows: number): ParsedSpreadsheet {
-  return buildTable(readGrid(buffer, format), maxRows)
+function parseGrid(buffer: Buffer, format: 'CSV' | 'XLSX', maxRows: number, offset: number, filters: SpreadsheetFilter[]): ParsedSpreadsheet {
+  return buildTable(readGrid(buffer, format), maxRows, offset, filters)
 }
 
 const REPORT_METADATA_LABELS = new Map([
@@ -299,6 +380,7 @@ export function parseFinancialReport(
   buffer: Buffer,
   format: Extract<SpreadsheetFormat, 'CSV' | 'XLSX'>,
   maxRows: number,
+  offset = 0,
 ): ParsedFinancialReport {
   if (buffer.length === 0) throw new SpreadsheetParseError('empty_file', 'Arquivo vazio')
   const grid = readGrid(buffer, format)
@@ -334,7 +416,7 @@ export function parseFinancialReport(
 
   const allRows = body.map((row) => row.filter((cell) => cell !== ''))
   const columnCount = Math.max(...allRows.map((row) => row.length))
-  const rows = allRows.slice(0, maxRows).map((cells) => ({ cells, kind: classifyReportRow(cells) }))
+  const rows = allRows.slice(offset, offset + maxRows).map((cells) => ({ cells, kind: classifyReportRow(cells) }))
 
   return {
     title,
@@ -342,7 +424,7 @@ export function parseFinancialReport(
     rows,
     columnCount,
     totalRowCount: allRows.length,
-    truncated: allRows.length > rows.length,
+    truncated: offset + rows.length < allRows.length,
   }
 }
 
@@ -356,8 +438,8 @@ export type SpreadsheetFormat = 'CSV' | 'JSON' | 'XLSX'
  * `format` vem do catalogo (nao do Content-Type nem da extensao da URL), porque e o dado que
  * a 10xGov ja curou e conferiu.
  */
-export function parseSpreadsheet(buffer: Buffer, format: SpreadsheetFormat, maxRows: number): ParsedSpreadsheet {
+export function parseSpreadsheet(buffer: Buffer, format: SpreadsheetFormat, maxRows: number, offset = 0, filters: SpreadsheetFilter[] = []): ParsedSpreadsheet {
   if (buffer.length === 0) throw new SpreadsheetParseError('empty_file', 'Arquivo vazio')
-  if (format === 'JSON') return parseJsonRecords(decodeText(buffer), maxRows)
-  return parseGrid(buffer, format, maxRows)
+  if (format === 'JSON') return parseJsonRecords(decodeText(buffer), maxRows, offset, filters)
+  return parseGrid(buffer, format, maxRows, offset, filters)
 }

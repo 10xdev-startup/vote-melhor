@@ -85,8 +85,43 @@ export interface Dataset {
   editions: DatasetEdition[]
 }
 
-/** Amostra de uma tabela regular, lida na hora a partir da fonte oficial. */
-export interface TabularFilePreview {
+export interface FilePreviewPagination {
+  /** Página atual, começando em 1. */
+  page: number
+  /** Quantidade máxima de linhas por página. */
+  pageSize: number
+  /** Total de páginas disponíveis. */
+  totalPages: number
+}
+
+export interface FilePreviewExactFilter {
+  column: string
+  operator: "equals"
+  value: string
+}
+
+export interface FilePreviewRangeFilter {
+  column: string
+  operator: "range"
+  min?: string
+  max?: string
+}
+
+export type FilePreviewFilter = FilePreviewExactFilter | FilePreviewRangeFilter
+
+export interface FilePreviewFacetOption {
+  value: string
+  count: number
+}
+
+export interface FilePreviewFacet {
+  column: string
+  options: FilePreviewFacetOption[]
+  totalDistinctValues: number
+}
+
+/** Página de uma tabela regular, lida na hora a partir da fonte oficial. */
+export interface TabularFilePreview extends FilePreviewPagination {
   layout: "tabular"
   fileId: string
   columns: string[]
@@ -95,6 +130,12 @@ export interface TabularFilePreview {
   rowCount: number
   /** Total de linhas de dados no arquivo, sem contar o cabecalho. */
   totalRowCount: number
+  /** Total antes da aplicação dos filtros. */
+  unfilteredRowCount: number
+  /** Filtros exatos aplicados antes da paginação. */
+  appliedFilters: FilePreviewFilter[]
+  /** Todos os valores distintos de cada coluna, com suas contagens. */
+  facets: FilePreviewFacet[]
   /** Totais monetarios do arquivo inteiro, indexados pelo nome da coluna. */
   columnTotals: Record<string, number>
   /** `true` quando o arquivo tem mais linhas do que as devolvidas. */
@@ -112,7 +153,7 @@ export interface ReportPreviewRow {
 }
 
 /** Demonstrativo contabil com metadados e grade de largura variavel. */
-export interface ReportFilePreview {
+export interface ReportFilePreview extends FilePreviewPagination {
   layout: "report"
   fileId: string
   title: string

@@ -9,6 +9,7 @@ const router = Router()
 router.use(supabaseMiddleware)
 
 router.get('/', DataCatalogController.list)
+router.get('/roadmap', DataCatalogController.roadmap)
 router.get('/files/:id/preview', DataCatalogController.preview)
 
 export { router as dataCatalogRoutes }

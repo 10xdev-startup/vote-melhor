@@ -70,6 +70,58 @@ describe('parseSpreadsheet — CSV', () => {
     expect(out.truncated).toBe(true)
   })
 
+  it('devolve o recorte solicitado sem perder total e totais monetários', () => {
+    const out = parseSpreadsheet(latin1(CSV_RECEITAS), 'CSV', 1, 1)
+    expect(out.rows).toEqual([['09/08/26', '02000 - SENADO FEDERAL', '10800,00', '11000,00']])
+    expect(out.totalRowCount).toBe(2)
+    expect(out.columnTotals['Receita Arrecadada']).toBe(13483.6)
+    expect(out.truncated).toBe(false)
+  })
+
+  it('filtra qualquer coluna antes de paginar e recalcula totais e facetas', () => {
+    const csv = [
+      '"Exercício Financeiro (Lan-Ef)";"Ação (nome)";"Valor Pago"',
+      '"2026";"AÇÃO A";"10800,00"',
+      '"2026";"AÇÃO A";"200,00"',
+      '"2025";"AÇÃO B";"5000,00"',
+    ].join('\n')
+    const out = parseSpreadsheet(utf8(csv), 'CSV', 20, 0, [{ column: 'Exercício Financeiro (Lan-Ef)', operator: 'equals', value: '2026' }])
+
+    expect(out.rows).toHaveLength(2)
+    expect(out.totalRowCount).toBe(2)
+    expect(out.unfilteredRowCount).toBe(3)
+    expect(out.columnTotals['Valor Pago']).toBe(11000)
+    expect(out.facets.find((facet) => facet.column === 'Exercício Financeiro (Lan-Ef)')?.options).toEqual([
+      { value: '2026', count: 2 },
+      { value: '2025', count: 1 },
+    ])
+    expect(out.facets.find((facet) => facet.column === 'Ação (nome)')?.options).toEqual([{ value: 'AÇÃO A', count: 2 }])
+  })
+
+  it('combina intervalo financeiro inclusivo com filtros exatos', () => {
+    const csv = [
+      '"Exercício";"Ação";"Valor Pago"',
+      '"2026";"A";"5000,00"',
+      '"2026";"B";"10800,00"',
+      '"2026";"C";"12000,00"',
+      '"2025";"D";"10500,00"',
+    ].join('\n')
+    const out = parseSpreadsheet(utf8(csv), 'CSV', 20, 0, [
+      { column: 'Exercício', operator: 'equals', value: '2026' },
+      { column: 'Valor Pago', operator: 'range', min: '10.000,00', max: '11.000,00' },
+    ])
+
+    expect(out.rows).toEqual([['2026', 'B', '10800,00']])
+    expect(out.columnTotals['Valor Pago']).toBe(10800)
+    expect(out.appliedFilters).toHaveLength(2)
+  })
+
+  it('não limita a quantidade de valores distintos sugeridos por coluna', () => {
+    const rows = Array.from({ length: 105 }, (_value, index) => `"${index}";"Valor ${index}"`)
+    const out = parseSpreadsheet(utf8(['"id";"nome"', ...rows].join('\n')), 'CSV', 20)
+    expect(out.facets.find((facet) => facet.column === 'nome')?.options).toHaveLength(105)
+  })
+
   it('normaliza a largura das linhas pela quantidade de colunas', () => {
     const csv = '"a";"b";"c"\n"1";"2"'
     const out = parseSpreadsheet(utf8(csv), 'CSV', 10)
@@ -140,5 +192,13 @@ describe('parseFinancialReport — demonstrativo contábil', () => {
     expect(out.rows).toHaveLength(1)
     expect(out.totalRowCount).toBe(3)
     expect(out.truncated).toBe(true)
+  })
+
+  it('pagina as linhas do relatório preservando os metadados', () => {
+    const out = parseFinancialReport(utf8(report), 'CSV', 1, 1)
+    expect(out.rows).toHaveLength(1)
+    expect(out.rows[0]?.cells).toContain('ESPECIFICAÇÃO')
+    expect(out.title).toBe('BALANÇO PATRIMONIAL - TODOS OS ORÇAMENTOS')
+    expect(out.totalRowCount).toBe(3)
   })
 })
