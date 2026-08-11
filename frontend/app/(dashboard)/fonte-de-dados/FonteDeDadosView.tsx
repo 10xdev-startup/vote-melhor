@@ -9,7 +9,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { cn } from '@/lib/utils'
 import { filterDatasets } from '@/lib/dataCatalogSearch'
 import { dataCatalogService } from '@/services/dataCatalogService'
-import type { DataFile, Dataset, DatasetEdition, FilePreview, FilePreviewFilter, SourceSystem } from '@/types/dataCatalog'
+import type { DataFile, Dataset, DatasetEdition, DatasetGovernmentTerm, FilePreview, FilePreviewFilter, SourceSystem } from '@/types/dataCatalog'
 import type { DataRoadmapItem, DataRoadmapSection, DataRoadmapStatus } from '@/types/dataRoadmap'
 
 /**
@@ -98,6 +98,13 @@ function formatBrazilianCurrency(value: string): string | undefined {
   return amount === undefined ? undefined : BRL_FORMATTER.format(amount)
 }
 
+function formatCompactCurrency(amount: number): string {
+  const absolute = Math.abs(amount)
+  if (absolute >= 1_000_000_000) return `R$ ${(amount / 1_000_000_000).toLocaleString('pt-BR', { maximumFractionDigits: 2 })} bi`
+  if (absolute >= 1_000_000) return `R$ ${(amount / 1_000_000).toLocaleString('pt-BR', { maximumFractionDigits: 2 })} mi`
+  return BRL_FORMATTER.format(amount)
+}
+
 function describeFilter(filter: FilePreviewFilter): string {
   if (filter.operator === 'equals') return filter.value
   const min = filter.min ? formatBrazilianCurrency(filter.min) ?? filter.min : undefined
@@ -175,7 +182,162 @@ function PreviewPagination({ preview, detail, loading, onPageChange }: { preview
   )
 }
 
-function TabularPreview({ preview, loading, onPageChange, onFiltersChange }: { preview: Extract<FilePreview, { layout: 'tabular' }>; loading: boolean; onPageChange: (page: number) => void; onFiltersChange: (filters: FilePreviewFilter[]) => void }) {
+interface YearComparison {
+  year: number
+  columnTotals: Record<string, number>
+}
+
+interface PreviewComparisons {
+  previous?: YearComparison
+  next?: YearComparison
+}
+
+function formatPercentageAgainst(current: number, comparison: number): string | undefined {
+  if (comparison === 0) return undefined
+  const percentage = ((current - comparison) / Math.abs(comparison)) * 100
+  if (Math.abs(percentage) < 0.05) return '0,0%'
+  const sign = percentage > 0 ? '+' : ''
+  return `${sign}${percentage.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`
+}
+
+function GovernmentInvestmentSummary({ currentFile, preview, comparisons, seriesFiles, terms }: { currentFile: DataFile; preview: Extract<FilePreview, { layout: 'tabular' }>; comparisons: PreviewComparisons; seriesFiles: DataFile[]; terms: DatasetGovernmentTerm[] }) {
+  const currentYear = currentFile.sourceQuery?.year
+  const [summaries, setSummaries] = useState<Record<number, YearComparison>>({})
+  const [failedYears, setFailedYears] = useState<number[]>([])
+  const [loading, setLoading] = useState(false)
+  const [loadedCount, setLoadedCount] = useState(0)
+  const totalsCache = useRef(new Map<number, YearComparison>())
+  const pendingTotals = useRef(new Map<number, Promise<YearComparison>>())
+  const requestId = useRef(0)
+  const displayTerms = [...terms].reverse().map((term) => ({ ...term, years: [...term.years].reverse() }))
+  const governmentYears = displayTerms.flatMap((term) => term.years)
+  const mandateSources = Array.from(new Map(terms.map((term) => [term.referenceUrl, term.referenceLabel])).entries())
+
+  useEffect(() => {
+    const nextRequestId = requestId.current + 1
+    requestId.current = nextRequestId
+    const initial: Record<number, YearComparison> = {}
+
+    if (currentYear !== undefined && preview.appliedFilters.length === 0) {
+      totalsCache.current.set(currentYear, { year: currentYear, columnTotals: preview.columnTotals })
+      if (comparisons.previous) totalsCache.current.set(comparisons.previous.year, comparisons.previous)
+      if (comparisons.next) totalsCache.current.set(comparisons.next.year, comparisons.next)
+    }
+    governmentYears.forEach(({ year }) => {
+      const cached = totalsCache.current.get(year)
+      if (cached) initial[year] = cached
+    })
+    setSummaries(initial)
+    setFailedYears([])
+    setLoadedCount(Object.keys(initial).length)
+    setLoading(true)
+
+    const load = async () => {
+      const failures: number[] = []
+      let completed = Object.keys(initial).length
+      for (const { year } of governmentYears) {
+        if (requestId.current !== nextRequestId) return
+        if (totalsCache.current.has(year)) continue
+        const yearFile = seriesFiles.find((candidate) => candidate.name === currentFile.name && candidate.sourceQuery?.year === year)
+        if (!yearFile) {
+          failures.push(year)
+          completed += 1
+          setFailedYears([...failures])
+          setLoadedCount(completed)
+          continue
+        }
+        try {
+          let pending = pendingTotals.current.get(year)
+          if (!pending) {
+            pending = dataCatalogService.getFilePreview(yearFile.id, 1, 1, []).then((yearPreview) => {
+              if (yearPreview.layout !== 'tabular') throw new Error('Formato inesperado')
+              return { year, columnTotals: yearPreview.columnTotals }
+            })
+            pendingTotals.current.set(year, pending)
+          }
+          const summary = await pending
+          pendingTotals.current.delete(year)
+          if (requestId.current !== nextRequestId) return
+          totalsCache.current.set(year, summary)
+          setSummaries((current) => ({ ...current, [year]: summary }))
+        } catch {
+          pendingTotals.current.delete(year)
+          failures.push(year)
+          setFailedYears([...failures])
+        }
+        completed += 1
+        setLoadedCount(completed)
+      }
+      if (requestId.current === nextRequestId) setLoading(false)
+    }
+
+    void load()
+    return () => {
+      requestId.current += 1
+    }
+  }, [currentFile.name, seriesFiles, terms])
+
+  return (
+    <section className="mb-3 rounded-md border bg-background p-3" aria-label="Investimentos por gestão estadual">
+      <div>
+        <p className="text-xs font-semibold text-foreground">Todos os exercícios por gestão estadual</p>
+        <p className="mt-0.5 text-[11px] text-muted-foreground">Os 17 anos permanecem separados e são agrupados apenas para mostrar em qual mandato ocorreram. Anos com troca de governador são marcados como transição.</p>
+      </div>
+
+      <div className="mt-3 max-w-full overflow-auto rounded border">
+        <table className="w-max min-w-full border-collapse text-xs">
+          <thead>
+            <tr className={ACCENT.header}>
+              <th className="whitespace-nowrap border-b border-r px-3 py-2 text-left font-semibold">Ano</th>
+              <th className="whitespace-nowrap border-b border-r px-3 py-2 text-left font-semibold">Responsável no exercício</th>
+              <th className="whitespace-nowrap border-b border-r px-3 py-2 text-right font-semibold">Orçamento aprovado</th>
+              <th className="whitespace-nowrap border-b border-r px-3 py-2 text-right font-semibold">Orçamento atualizado</th>
+              <th className="whitespace-nowrap border-b border-r px-3 py-2 text-right font-semibold">Valor comprometido</th>
+              <th className="whitespace-nowrap border-b border-r px-3 py-2 text-right font-semibold">Despesa reconhecida</th>
+              <th className="whitespace-nowrap border-b border-r px-3 py-2 text-right font-semibold">Dinheiro pago</th>
+              <th className="whitespace-nowrap border-b px-3 py-2 text-right font-semibold">% do orçamento pago</th>
+            </tr>
+          </thead>
+          {displayTerms.map((term) => (
+            <tbody key={term.id}>
+              <tr className="border-b bg-muted/35">
+                <th colSpan={8} scope="rowgroup" className="px-3 py-2 text-left font-semibold">
+                  {term.label} <span className="ml-1 font-normal text-muted-foreground">· {term.period}</span>
+                </th>
+              </tr>
+              {term.years.map((yearInfo) => {
+                const summary = summaries[yearInfo.year]
+                const currentBudget = summary?.columnTotals['Dotação atual'] ?? 0
+                const paid = summary?.columnTotals['Valor pago'] ?? 0
+                const executionRate = currentBudget > 0 ? (paid / currentBudget) * 100 : undefined
+                const value = (column: string) => summary ? formatCompactCurrency(summary.columnTotals[column] ?? 0) : failedYears.includes(yearInfo.year) ? 'Indisponível' : 'Carregando…'
+                return (
+                  <tr key={yearInfo.year} className="border-b last:border-b-0">
+                    <td className="whitespace-nowrap border-r px-3 py-2 font-semibold tabular-nums">{yearInfo.year}{yearInfo.year === 2026 ? <span className="ml-1.5 rounded border px-1 py-px text-[9px] font-medium text-muted-foreground">parcial</span> : null}</td>
+                    <td className="whitespace-nowrap border-r px-3 py-2 text-muted-foreground">{yearInfo.governor}{yearInfo.transition ? <span className="ml-1.5 rounded border px-1 py-px text-[9px] font-medium">transição</span> : null}</td>
+                    {['Dotação inicial', 'Dotação atual', 'Valor empenhado', 'Valor liquidado', 'Valor pago'].map((column) => <td key={column} className="whitespace-nowrap border-r px-3 py-2 text-right tabular-nums text-foreground/80">{value(column)}</td>)}
+                    <td className="whitespace-nowrap px-3 py-2 text-right font-semibold tabular-nums">{summary ? executionRate === undefined ? '—' : `${executionRate.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%` : failedYears.includes(yearInfo.year) ? '—' : 'Carregando…'}</td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          ))}
+        </table>
+      </div>
+
+      <div className="mt-2 text-[10px] text-muted-foreground/75">
+        {loading && <p>Carregando {loadedCount} de {governmentYears.length} exercícios, um por vez…</p>}
+        <p>Valores nominais publicados pelo SIAFEM/SP; não corrigidos pela inflação.</p>
+        <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1">
+          {mandateSources.map(([url, label]) => <a key={url} href={url} target="_blank" rel="noopener noreferrer" className={cn('flex items-center gap-1 underline-offset-4 hover:underline', ACCENT.link)}>{label}<ExternalLink className="size-3" /></a>)}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function TabularPreview({ currentFile, preview, comparisons, comparisonLoading, governmentTerms, seriesFiles, loading, onPageChange, onFiltersChange }: { currentFile: DataFile; preview: Extract<FilePreview, { layout: 'tabular' }>; comparisons: PreviewComparisons; comparisonLoading: boolean; governmentTerms: DatasetGovernmentTerm[]; seriesFiles: DataFile[]; loading: boolean; onPageChange: (page: number) => void; onFiltersChange: (filters: FilePreviewFilter[]) => void }) {
+  const [summaryMode, setSummaryMode] = useState<'year' | 'government'>('year')
   const [filterColumn, setFilterColumn] = useState('')
   const [filterValue, setFilterValue] = useState('')
   const [filterMin, setFilterMin] = useState('')
@@ -195,6 +357,15 @@ function TabularPreview({ preview, loading, onPageChange, onFiltersChange }: { p
     .map((option) => ({ ...option, amount: parseBrazilianCurrency(option.value) }))
     .filter((option): option is typeof option & { amount: number } => option.amount !== undefined)
     .sort((left, right) => left.amount - right.amount), [selectedFacet])
+  const isSpInvestmentPreview = ['Exercício', 'Grupo da despesa', 'Órgão', 'Elemento da despesa', 'Dotação inicial', 'Valor empenhado'].every((column) => preview.columns.includes(column))
+  const investmentYear = preview.facets.find((facet) => facet.column === 'Exercício')?.options[0]?.value
+  const investmentPhases = [
+    { column: 'Dotação inicial', label: 'Orçamento aprovado', detail: 'Dotação inicial · valor aprovado na LOA' },
+    { column: 'Dotação atual', label: 'Orçamento atualizado', detail: 'Dotação atual · após créditos e alterações' },
+    { column: 'Valor empenhado', label: 'Valor comprometido', detail: 'Empenhado · reservado para despesas' },
+    { column: 'Valor liquidado', label: 'Despesa reconhecida', detail: 'Liquidado · obrigação já conferida' },
+    { column: 'Valor pago', label: 'Dinheiro pago', detail: 'Pago · valor já desembolsado' },
+  ].flatMap((phase) => preview.columnTotals[phase.column] === undefined ? [] : [{ ...phase, amount: preview.columnTotals[phase.column] }])
 
   const applyFilter = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -211,6 +382,57 @@ function TabularPreview({ preview, loading, onPageChange, onFiltersChange }: { p
 
   return (
     <div className="border-t bg-muted/20 px-4 py-3">
+      {isSpInvestmentPreview && governmentTerms.length > 0 && (
+        <div className="mb-2 flex w-fit rounded-md border bg-background p-0.5" role="group" aria-label="Modo do resumo de investimentos">
+          <button type="button" aria-pressed={summaryMode === 'year'} onClick={() => setSummaryMode('year')} className={cn('rounded px-2.5 py-1 text-[11px] font-medium text-muted-foreground transition-colors', summaryMode === 'year' && 'bg-muted text-foreground')}>Por exercício</button>
+          <button type="button" aria-pressed={summaryMode === 'government'} onClick={() => setSummaryMode('government')} disabled={comparisonLoading} title={comparisonLoading ? 'Aguarde a comparação anual terminar' : undefined} className={cn('rounded px-2.5 py-1 text-[11px] font-medium text-muted-foreground transition-colors disabled:opacity-50', summaryMode === 'government' && 'bg-muted text-foreground')}>Por gestão</button>
+        </div>
+      )}
+      {isSpInvestmentPreview && summaryMode === 'government' && governmentTerms.length > 0 ? (
+        <GovernmentInvestmentSummary currentFile={currentFile} preview={preview} comparisons={comparisons} seriesFiles={seriesFiles} terms={governmentTerms} />
+      ) : isSpInvestmentPreview ? (
+        <section className="mb-3 rounded-md border bg-background p-3" aria-label="Resumo do exercício">
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <div>
+              <p className="text-xs font-semibold text-foreground">Números do exercício{investmentYear ? ` ${investmentYear}` : ''}</p>
+              <p className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground">
+                O dinheiro avança por estas etapas: orçamento aprovado → atualizado → comprometido → reconhecido → pago.
+              </p>
+              <div className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
+                <p><span className="font-semibold text-foreground/75">LOA</span> — Lei Orçamentária Anual, o orçamento aprovado.</p>
+                <p><span className="font-semibold text-foreground/75">PLOA</span> — Projeto de Lei Orçamentária Anual, a proposta enviada antes da aprovação.</p>
+              </div>
+            </div>
+            {preview.appliedFilters.length > 0 && <span className={cn('rounded-full border px-2 py-0.5 text-[10px] font-semibold', ACCENT.badge)}>Totais com filtros</span>}
+          </div>
+          <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
+            {investmentPhases.map((phase) => {
+              const currentYear = investmentYear ? Number(investmentYear) : undefined
+              const previousPercentage = comparisons.previous
+                ? formatPercentageAgainst(phase.amount, comparisons.previous.columnTotals[phase.column] ?? 0)
+                : undefined
+              const nextPercentage = comparisons.next
+                ? formatPercentageAgainst(comparisons.next.columnTotals[phase.column] ?? 0, phase.amount)
+                : undefined
+
+              return (
+                <div key={phase.column} className="rounded-md border bg-muted/15 px-3 py-2" title={BRL_FORMATTER.format(phase.amount)}>
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{phase.label}</p>
+                  <p className="mt-1 text-lg font-semibold tabular-nums text-foreground">{formatCompactCurrency(phase.amount)}</p>
+                  <p className="mt-0.5 text-[10px] text-muted-foreground">{phase.detail}</p>
+                  <p className="mt-1 truncate text-[10px] tabular-nums text-muted-foreground/75">{BRL_FORMATTER.format(phase.amount)}</p>
+                  <div className="mt-1.5 flex flex-col gap-0.5 text-[10px] tabular-nums text-muted-foreground">
+                    {comparisons.previous && <span>{comparisons.previous.year} → {currentYear}: <strong className="font-semibold text-foreground/70">{previousPercentage ?? '—'}</strong></span>}
+                    {comparisons.next && <span>{currentYear} → {comparisons.next.year}: <strong className="font-semibold text-foreground/70">{nextPercentage ?? '—'}</strong></span>}
+                    {comparisonLoading && <span>Carregando comparações…</span>}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+          {(comparisons.previous || comparisons.next) && <p className="mt-2 text-[10px] leading-relaxed text-muted-foreground/75">As variações comparam a mesma etapa entre exercícios; anos em andamento apresentam valores parciais.</p>}
+        </section>
+      ) : null}
       <div className="mb-3 rounded-md border bg-background p-2.5">
         <form onSubmit={applyFilter} className="flex flex-wrap items-center gap-2">
           <span className="text-xs font-semibold text-foreground/80">{preview.appliedFilters.length > 0 ? 'Adicionar outro filtro' : 'Filtrar tabela'}</span>
@@ -288,7 +510,7 @@ function TabularPreview({ preview, loading, onPageChange, onFiltersChange }: { p
                     index === 0 && 'left-0 z-20 shadow-[2px_0_0_hsl(var(--border))]',
                   )}
                 >
-                  {preview.columnTotals[column] !== undefined && (
+                  {preview.columnTotals[column] !== undefined && !isSpInvestmentPreview && (
                     <span className="mb-0.5 block text-[11px] font-bold text-foreground">
                       Total: {BRL_FORMATTER.format(preview.columnTotals[column])}
                     </span>
@@ -407,21 +629,27 @@ function FinancialReportPreview({ preview, loading, onPageChange }: { preview: E
   )
 }
 
-function FilePreviewContent({ preview, loading, onPageChange, onFiltersChange }: { preview: FilePreview; loading: boolean; onPageChange: (page: number) => void; onFiltersChange: (filters: FilePreviewFilter[]) => void }) {
+function FilePreviewContent({ currentFile, preview, comparisons, comparisonLoading, governmentTerms, seriesFiles, loading, onPageChange, onFiltersChange }: { currentFile: DataFile; preview: FilePreview; comparisons: PreviewComparisons; comparisonLoading: boolean; governmentTerms: DatasetGovernmentTerm[]; seriesFiles: DataFile[]; loading: boolean; onPageChange: (page: number) => void; onFiltersChange: (filters: FilePreviewFilter[]) => void }) {
   return preview.layout === 'report' ? (
     <FinancialReportPreview preview={preview} loading={loading} onPageChange={onPageChange} />
   ) : (
-    <TabularPreview preview={preview} loading={loading} onPageChange={onPageChange} onFiltersChange={onFiltersChange} />
+    <TabularPreview currentFile={currentFile} preview={preview} comparisons={comparisons} comparisonLoading={comparisonLoading} governmentTerms={governmentTerms} seriesFiles={seriesFiles} loading={loading} onPageChange={onPageChange} onFiltersChange={onFiltersChange} />
   )
 }
 
-function FileRow({ file }: { file: DataFile }) {
+function FileRow({ file, previousFile, nextFile, governmentTerms, seriesFiles }: { file: DataFile; previousFile: DataFile | undefined; nextFile: DataFile | undefined; governmentTerms: DatasetGovernmentTerm[]; seriesFiles: DataFile[] }) {
   const Icon = file.format === 'JSON' ? FileJson : FileSpreadsheet
+  const isApiSource = file.sourceQuery !== undefined
   const [open, setOpen] = useState(false)
   const [preview, setPreview] = useState<FilePreview | null>(null)
+  const [comparisons, setComparisons] = useState<PreviewComparisons>({})
+  const [comparisonLoading, setComparisonLoading] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const previewCache = useRef(new Map<string, FilePreview>())
+  const comparisonCache = useRef(new Map<string, PreviewComparisons>())
+  const comparisonRequestId = useRef(0)
+  const previousFileId = useRef(file.id)
 
   const loadPage = useCallback(async (page: number, filters: FilePreviewFilter[]) => {
     const cacheKey = JSON.stringify([page, filters])
@@ -445,6 +673,64 @@ function FileRow({ file }: { file: DataFile }) {
     }
   }, [file.id])
 
+  const loadComparisons = useCallback(async (filters: FilePreviewFilter[]) => {
+    const requestId = comparisonRequestId.current + 1
+    comparisonRequestId.current = requestId
+
+    if (!file.sourceQuery) {
+      setComparisons({})
+      setComparisonLoading(false)
+      return
+    }
+
+    const cacheKey = JSON.stringify([file.id, previousFile?.id, nextFile?.id, filters])
+    const cached = comparisonCache.current.get(cacheKey)
+    if (cached) {
+      setComparisons(cached)
+      setComparisonLoading(false)
+      return
+    }
+
+    setComparisons({})
+    setComparisonLoading(true)
+    const result: PreviewComparisons = {}
+    const candidates: Array<['previous' | 'next', DataFile | undefined]> = [['previous', previousFile], ['next', nextFile]]
+
+    for (const [relation, candidate] of candidates) {
+      if (!candidate?.sourceQuery) continue
+      const comparisonFilters = filters.filter((filter) => filter.column !== 'Exercício')
+      try {
+        const neighborPreview = await dataCatalogService.getFilePreview(candidate.id, 1, 1, comparisonFilters)
+        if (neighborPreview.layout !== 'tabular') continue
+        const comparison = { year: candidate.sourceQuery.year, columnTotals: neighborPreview.columnTotals }
+        if (relation === 'previous') result.previous = comparison
+        else result.next = comparison
+        if (comparisonRequestId.current === requestId) setComparisons({ ...result })
+      } catch {
+        // A indisponibilidade de um exercício vizinho não impede a leitura do ano atual.
+      }
+    }
+
+    if (comparisonRequestId.current !== requestId) return
+    comparisonCache.current.set(cacheKey, result)
+    setComparisons(result)
+    setComparisonLoading(false)
+  }, [file.id, file.sourceQuery, nextFile, previousFile])
+
+  useEffect(() => {
+    if (previousFileId.current === file.id) return
+    previousFileId.current = file.id
+    comparisonRequestId.current += 1
+    previewCache.current.clear()
+    setPreview(null)
+    setComparisons({})
+    setComparisonLoading(false)
+    setError(null)
+    if (open) {
+      void loadPage(1, []).then(() => loadComparisons([]))
+    }
+  }, [file.id, loadComparisons, loadPage, open])
+
   const toggle = useCallback(async () => {
     if (open) {
       setOpen(false)
@@ -454,7 +740,8 @@ function FileRow({ file }: { file: DataFile }) {
     // Cada pagina e guardada no card: reabrir ou voltar nao bate na origem de novo.
     if (preview || loading) return
     await loadPage(1, [])
-  }, [open, preview, loading, loadPage])
+    void loadComparisons([])
+  }, [open, preview, loading, loadComparisons, loadPage])
 
   return (
     <div>
@@ -493,14 +780,14 @@ function FileRow({ file }: { file: DataFile }) {
           href={file.url}
           target="_blank"
           rel="noopener noreferrer"
-          aria-label={`Baixar ${file.name}`}
+          aria-label={isApiSource ? `Abrir API oficial de ${file.name}` : `Baixar ${file.name}`}
           className={cn(
             'flex shrink-0 items-center gap-1.5 text-xs font-medium text-muted-foreground transition-colors',
             ACCENT.rowText
           )}
         >
-          Baixar
-          <Download className="size-3.5" />
+          {isApiSource ? 'API oficial' : 'Baixar'}
+          {isApiSource ? <ExternalLink className="size-3.5" /> : <Download className="size-3.5" />}
         </a>
       </div>
 
@@ -519,7 +806,7 @@ function FileRow({ file }: { file: DataFile }) {
               <p className="mt-1 text-muted-foreground">{error}</p>
             </div>
           )}
-          {preview && <FilePreviewContent preview={preview} loading={loading} onPageChange={(page) => void loadPage(page, preview.layout === 'tabular' ? preview.appliedFilters : [])} onFiltersChange={(filters) => void loadPage(1, filters)} />}
+          {preview && <FilePreviewContent currentFile={file} preview={preview} comparisons={comparisons} comparisonLoading={comparisonLoading} governmentTerms={governmentTerms} seriesFiles={seriesFiles} loading={loading} onPageChange={(page) => void loadPage(page, preview.layout === 'tabular' ? preview.appliedFilters : [])} onFiltersChange={(filters) => void loadPage(1, filters).then(() => loadComparisons(filters))} />}
         </>
       )}
     </div>
@@ -641,7 +928,7 @@ function DatasetCard({ dataset }: { dataset: Dataset }) {
 
       <div id={`dataset-files-${dataset.id}`} hidden={!isExpanded} className="divide-y">
         {edition.files.map((file) => (
-          <FileRow key={file.id} file={file} />
+          <FileRow key={file.name} file={file} previousFile={dataset.editions[index - 1]?.files.find((candidate) => candidate.name === file.name)} nextFile={dataset.editions[index + 1]?.files.find((candidate) => candidate.name === file.name)} governmentTerms={dataset.governmentTerms ?? []} seriesFiles={dataset.editions.flatMap((candidateEdition) => candidateEdition.files)} />
         ))}
       </div>
     </section>
@@ -854,6 +1141,7 @@ export function FonteDeDadosView() {
 
   const totalFiles = datasets ? countFiles(datasets) : 0
   const visibleFiles = countFiles(results)
+  const sourceCount = datasets ? new Set(datasets.map((dataset) => dataset.organ)).size : 0
 
   const selectTab = useCallback((nextTab: 'summary' | 'data') => {
     setActiveTabState(nextTab)
@@ -926,7 +1214,7 @@ export function FonteDeDadosView() {
                 <p className="mt-2.5 text-xs text-muted-foreground">
                   {query.trim()
                     ? `${visibleFiles} de ${totalFiles} arquivos`
-                    : `${totalFiles} arquivos em ${datasets.length} conjuntos · Senado Federal · Orçamento do Senado`}
+                    : `${totalFiles} arquivos em ${datasets.length} conjuntos · ${sourceCount} ${sourceCount === 1 ? 'fonte oficial' : 'fontes oficiais'}`}
                 </p>
               )}
             </fieldset>

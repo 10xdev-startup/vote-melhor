@@ -28,6 +28,9 @@ RUN npm ci --omit=dev --workspace=backend --include-workspace-root \
   && npm cache clean --force
 
 COPY --from=builder --chown=apiuser:nodejs /app/backend/dist ./backend/dist
+COPY --from=builder --chown=apiuser:nodejs /app/backend/certs ./backend/certs
+
+ENV NODE_EXTRA_CA_CERTS=/app/backend/certs/icp-brasil-v10.crt
 
 WORKDIR /app/backend
 USER apiuser

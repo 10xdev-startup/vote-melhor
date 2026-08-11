@@ -28,6 +28,11 @@ const AVAILABLE_ROADMAP_CONFIG: AvailableRoadmapConfig[] = [
     nextStep: 'Extrair indicadores comparáveis sem perder o vínculo com as linhas do demonstrativo.',
     catalogQuery: 'balanço',
   },
+  {
+    datasetId: 'sp-execucao-investimentos',
+    nextStep: 'Consolidar a série por exercício e comparar previsto, empenhado, liquidado e pago sem misturar as fases.',
+    catalogQuery: 'investimentos são paulo',
+  },
 ]
 
 function buildAvailableItems(): DataRoadmapItem[] {

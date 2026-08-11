@@ -1,4 +1,4 @@
-import type { DataFile, Dataset, DatasetEdition, SourceSystem } from "@/types/dataCatalog"
+import type { DataFile, Dataset, DatasetEdition, DatasetGovernmentTerm, SourceSystem } from "@/types/dataCatalog"
 
 /**
  * Catalogo curado dos arquivos publicados pelo Senado no grupo "Orcamento do Senado".
@@ -184,6 +184,78 @@ const DEMONSTRACOES_EDITIONS: DatasetEdition[] = STATEMENT_YEARS.map((entry) => 
 
 const ARQUIMEDES_BASE = "https://www.senado.gov.br/bi-arqs/Arquimedes/Financeiro"
 
+const SP_TRANSPARENCY_URL = "https://www.transparencia.sp.gov.br/home/despcontratos"
+const SP_WEBSERVICE_URL = "https://webservices.fazenda.sp.gov.br/WSTransparencia/TransparenciaServico.asmx"
+const SIAFEM_SP: SourceSystem = {
+  name: "SIAFEM/SP",
+  description:
+    "Sistema Integrado de Administração Financeira para Estados e Municípios usado pelo Estado de São Paulo. A Secretaria da Fazenda publica diariamente sua execução orçamentária e financeira pelo Portal da Transparência e por web service.",
+  referenceUrl: SP_TRANSPARENCY_URL,
+}
+
+const SP_INVESTMENT_EDITIONS: DatasetEdition[] = Array.from({ length: 17 }, (_value, index) => 2010 + index).map((year) => ({
+  id: `sp-investimentos-${year}`,
+  label: String(year),
+  year,
+  updatedAt: "2026-08-11",
+  files: [
+    {
+      id: `sp-investimentos-${year}-xml`,
+      name: "Investimentos e inversões financeiras por órgão",
+      description:
+        "Linhas brutas do SIAFEM/SP classificadas nas naturezas 44 (investimentos) e 45 (inversões financeiras), com dotação, empenho, liquidação e pagamento por órgão e elemento de despesa.",
+      format: "XML",
+      layout: "tabular",
+      url: SP_WEBSERVICE_URL,
+      sizeInBytes: null,
+      sourceQuery: { type: "sp-fazenda-expenses", year, naturePrefixes: ["44", "45"] },
+    },
+  ],
+}))
+
+const SP_GOVERNMENT_TERMS: DatasetGovernmentTerm[] = [
+  {
+    id: "serra-goldman-2007-2010",
+    label: "José Serra / Alberto Goldman",
+    period: "2007–2010 · dados disponíveis desde 2010",
+    years: [{ year: 2010, governor: "José Serra → Alberto Goldman", transition: true }],
+    referenceLabel: "Histórico de governadores — Biblioteca Jurídica de SP",
+    referenceUrl: "https://www.bibliotecajuridica.sp.gov.br/discursos-de-posse-dos-governadores/",
+  },
+  {
+    id: "alckmin-2011-2014",
+    label: "Geraldo Alckmin",
+    period: "2011–2014",
+    years: [2011, 2012, 2013, 2014].map((year) => ({ year, governor: "Geraldo Alckmin", transition: false })),
+    referenceLabel: "Histórico de governadores — Biblioteca Jurídica de SP",
+    referenceUrl: "https://www.bibliotecajuridica.sp.gov.br/discursos-de-posse-dos-governadores/",
+  },
+  {
+    id: "alckmin-franca-2015-2018",
+    label: "Geraldo Alckmin / Márcio França",
+    period: "2015–2018",
+    years: [...[2015, 2016, 2017].map((year) => ({ year, governor: "Geraldo Alckmin", transition: false })), { year: 2018, governor: "Geraldo Alckmin → Márcio França", transition: true }],
+    referenceLabel: "Histórico de governadores — Biblioteca Jurídica de SP",
+    referenceUrl: "https://www.bibliotecajuridica.sp.gov.br/discursos-de-posse-dos-governadores/",
+  },
+  {
+    id: "doria-garcia-2019-2022",
+    label: "João Doria / Rodrigo Garcia",
+    period: "2019–2022",
+    years: [...[2019, 2020, 2021].map((year) => ({ year, governor: "João Doria", transition: false })), { year: 2022, governor: "João Doria → Rodrigo Garcia", transition: true }],
+    referenceLabel: "Histórico de governadores — Biblioteca Jurídica de SP",
+    referenceUrl: "https://www.bibliotecajuridica.sp.gov.br/discursos-de-posse-dos-governadores/",
+  },
+  {
+    id: "tarcisio-2023-2026",
+    label: "Tarcísio de Freitas",
+    period: "2023–2026",
+    years: [2023, 2024, 2025, 2026].map((year) => ({ year, governor: "Tarcísio de Freitas", transition: false })),
+    referenceLabel: "Posse da gestão 2023–2026 — Alesp",
+    referenceUrl: "https://www.al.sp.gov.br/noticia/?id=445244",
+  },
+]
+
 const DATASETS: Dataset[] = [
   {
     id: "senado-dotacao-e-despesas",
@@ -280,6 +352,21 @@ const DATASETS: Dataset[] = [
     officialUrl: ORCAMENTO_SENADO_URL,
     collectedAt: COLLECTED_AT,
     editions: DEMONSTRACOES_EDITIONS,
+  },
+  {
+    id: "sp-execucao-investimentos",
+    title: "Execução de investimentos do Estado de São Paulo",
+    description:
+      "Dados brutos da execução do Orçamento Fiscal e da Seguridade Social: investimentos e inversões financeiras por órgão, preservando separadamente dotação, empenho, liquidação e pagamento.",
+    organ: "Governo do Estado de São Paulo",
+    group: "Execução Orçamentária e Financeira",
+    sourceSystem: SIAFEM_SP,
+    updateFrequency: "Diário",
+    maintainer: "Secretaria da Fazenda e Planejamento",
+    officialUrl: SP_TRANSPARENCY_URL,
+    collectedAt: "2026-08-11",
+    editions: SP_INVESTMENT_EDITIONS,
+    governmentTerms: SP_GOVERNMENT_TERMS,
   },
 ]
 

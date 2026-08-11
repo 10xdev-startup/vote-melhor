@@ -1,5 +1,11 @@
 /** Formato em que o orgao publica o arquivo. */
-export type DataFileFormat = "CSV" | "JSON"
+export type DataFileFormat = "CSV" | "JSON" | "XML"
+
+export interface DataFileSourceQuery {
+  type: "sp-fazenda-expenses"
+  year: number
+  naturePrefixes: Array<"44" | "45">
+}
 
 /**
  * Como o conteudo do arquivo e organizado — nao e capacidade tecnica, e formato.
@@ -28,6 +34,7 @@ export interface DataFile {
   url: string
   /** Tamanho em bytes medido na coleta; `null` quando o orgao nao informa. */
   sizeInBytes: number | null
+  sourceQuery?: DataFileSourceQuery
 }
 
 /**
@@ -46,6 +53,22 @@ export interface DatasetEdition {
   /** Ultima atualizacao declarada pelo orgao para esta edicao (ISO 8601). */
   updatedAt: string
   files: DataFile[]
+}
+
+export interface DatasetGovernmentYear {
+  year: number
+  governor: string
+  transition: boolean
+}
+
+/** Mandato estadual usado para agrupar exercícios sem atribuir toda a gestão a uma só pessoa. */
+export interface DatasetGovernmentTerm {
+  id: string
+  label: string
+  period: string
+  years: DatasetGovernmentYear[]
+  referenceLabel: string
+  referenceUrl: string
 }
 
 /**
@@ -83,6 +106,8 @@ export interface Dataset {
   collectedAt: string
   /** Em ordem cronologica crescente: a UI abre na ultima (mais recente). */
   editions: DatasetEdition[]
+  /** Presente em séries estaduais que podem ser comparadas por mandato de governo. */
+  governmentTerms?: DatasetGovernmentTerm[]
 }
 
 export interface FilePreviewPagination {

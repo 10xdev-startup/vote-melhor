@@ -7,18 +7,20 @@ const allFiles = catalog.flatMap((dataset) => dataset.editions.flatMap((edition)
 // O catalogo e curado a mao: o risco e id repetido, url fora do dominio oficial e arquivo
 // perdendo o nome legivel — que e o motivo da pagina existir.
 describe('DataCatalogModel', () => {
-  it('agrupa os 40 arquivos em 3 conjuntos, com os exercícios como edições', () => {
-    expect(catalog).toHaveLength(3)
-    expect(allFiles).toHaveLength(40)
+  it('agrupa os arquivos em 4 conjuntos, com os exercícios como edições', () => {
+    expect(catalog).toHaveLength(4)
+    expect(allFiles).toHaveLength(57)
 
     const demonstracoes = catalog.find((dataset) => dataset.id === 'senado-demonstracoes-contabeis')
     expect(demonstracoes?.editions).toHaveLength(6)
+    expect(catalog.find((dataset) => dataset.id === 'sp-execucao-investimentos')?.editions).toHaveLength(17)
   })
 
-  it('marca como tabular só os 4 arquivos do Arquimedes', () => {
+  it('marca como tabulares os arquivos do Arquimedes e as consultas da Fazenda', () => {
     const tabular = allFiles.filter((file) => file.layout === 'tabular')
-    expect(tabular).toHaveLength(4)
-    tabular.forEach((file) => expect(file.url).toContain('Arquimedes'))
+    expect(tabular).toHaveLength(21)
+    expect(tabular.filter((file) => file.url.includes('Arquimedes'))).toHaveLength(4)
+    expect(tabular.filter((file) => file.sourceQuery?.type === 'sp-fazenda-expenses')).toHaveLength(17)
 
     // Os 36 demonstrativos contabeis sao relatorio do Tesouro, nao tabela.
     expect(allFiles.filter((file) => file.layout === 'report')).toHaveLength(36)
@@ -33,9 +35,9 @@ describe('DataCatalogModel', () => {
     expect(new Set(fileIds).size).toBe(fileIds.length)
   })
 
-  it('aponta todo download para um domínio oficial do Senado', () => {
+  it('aponta todo arquivo para um domínio oficial do órgão publicador', () => {
     allFiles.forEach((file) => {
-      expect(file.url).toMatch(/^https:\/\/(www12\.senado\.leg\.br|www\.senado\.gov\.br)\//)
+      expect(file.url).toMatch(/^https:\/\/(www12\.senado\.leg\.br|www\.senado\.gov\.br|webservices\.fazenda\.sp\.gov\.br)\//)
     })
   })
 
@@ -50,9 +52,17 @@ describe('DataCatalogModel', () => {
 
   it('explica o sistema de origem e cita a página oficial que sustenta a definição', () => {
     const systems = new Map(catalog.map((dataset) => [dataset.sourceSystem.name, dataset.sourceSystem]))
-    expect([...systems.keys()].sort()).toEqual(['Arquimedes', 'SIAFI'])
+    expect([...systems.keys()].sort()).toEqual(['Arquimedes', 'SIAFEM/SP', 'SIAFI'])
     expect(systems.get('SIAFI')?.referenceUrl).toContain('tesouronacional')
     expect(systems.get('Arquimedes')?.referenceUrl).toContain('senado.leg.br')
+    expect(systems.get('SIAFEM/SP')?.referenceUrl).toContain('transparencia.sp.gov.br')
+  })
+
+  it('documenta os mandatos e os anos de transição da série paulista', () => {
+    const terms = catalog.find((dataset) => dataset.id === 'sp-execucao-investimentos')?.governmentTerms
+    expect(terms?.flatMap((term) => term.years.map((item) => item.year))).toEqual(Array.from({ length: 17 }, (_value, index) => 2010 + index))
+    expect(terms?.flatMap((term) => term.years).filter((item) => item.transition).map((item) => item.year)).toEqual([2010, 2018, 2022])
+    expect(terms?.every((term) => term.referenceUrl.startsWith('https://'))).toBe(true)
   })
 
   describe('findFileById', () => {
@@ -70,6 +80,10 @@ describe('DataCatalogModel', () => {
 
     it('devolve undefined para id desconhecido', () => {
       expect(DataCatalogModel.findFileById('nao-existe')).toBeUndefined()
+    })
+
+    it('resolve a consulta parametrizada da Fazenda pelo exercício', () => {
+      expect(DataCatalogModel.findFileById('sp-investimentos-2024-xml')?.sourceQuery).toEqual({ type: 'sp-fazenda-expenses', year: 2024, naturePrefixes: ['44', '45'] })
     })
   })
 })

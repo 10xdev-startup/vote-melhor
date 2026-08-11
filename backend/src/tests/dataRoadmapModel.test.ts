@@ -8,10 +8,10 @@ describe('DataRoadmapModel', () => {
   const availableItems = items.filter((item) => item.status === 'available')
 
   it('expõe os status e mantém todo o cardápio', () => {
-    expect(DataRoadmapModel.countItems('available')).toBe(3)
+    expect(DataRoadmapModel.countItems('available')).toBe(4)
     expect(DataRoadmapModel.countItems('mapped')).toBe(22)
     expect(DataRoadmapModel.countItems('discovery')).toBe(0)
-    expect(items).toHaveLength(25)
+    expect(items).toHaveLength(26)
   })
 
   it('deriva todo item disponível de um conjunto real do catálogo', () => {

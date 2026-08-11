@@ -5,6 +5,7 @@ import { parseFinancialReport, parseSpreadsheet, SpreadsheetParseError, type Spr
 import { sendOk } from '@/utils/apiResponse'
 import { AppError } from '@/utils/AppError'
 import { fetchSourceFile } from '@/utils/fetchSourceFile'
+import { fetchSpFazendaExpenses } from '@/utils/fetchSpFazendaExpenses'
 import type { FilePreview } from '@/types/dataCatalog'
 
 /** Tamanho padrão e teto de cada página do visualizador. */
@@ -72,7 +73,7 @@ export const DataCatalogController = {
     const file = DataCatalogModel.findFileById(fileId)
     if (!file) throw new AppError(404, 'Arquivo não encontrado no catálogo', 'FILE_NOT_FOUND')
 
-    const buffer = await fetchSourceFile(file.url)
+    const buffer = file.sourceQuery ? await fetchSpFazendaExpenses(file.sourceQuery) : await fetchSourceFile(file.url)
     const pageSize = resolveLimit(req.query['limit'])
     const page = resolvePage(req.query['page'])
     const filters = resolveFilters(req.query['filters'])
@@ -103,7 +104,9 @@ export const DataCatalogController = {
         return
       }
 
-      const parsed = parseSpreadsheet(buffer, file.format, pageSize, offset, filters)
+      const parseFormat = file.sourceQuery ? 'JSON' : file.format
+      if (parseFormat === 'XML') throw new AppError(422, 'Consulta XML sem adaptador de visualização', 'XML_PREVIEW_UNSUPPORTED')
+      const parsed = parseSpreadsheet(buffer, parseFormat, pageSize, offset, filters)
       const preview: FilePreview = {
         layout: 'tabular',
         fileId: file.id,

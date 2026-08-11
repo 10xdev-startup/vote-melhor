@@ -1,4 +1,4 @@
-import { apiClient } from "@/services/apiClient"
+import { apiClient, LONG_RUNNING_TIMEOUT_MS } from "@/services/apiClient"
 import type { Dataset, FilePreview, FilePreviewFilter } from "@/types/dataCatalog"
 import type { DataRoadmapSection } from "@/types/dataRoadmap"
 
@@ -20,6 +20,6 @@ export const dataCatalogService = {
   getFilePreview: (fileId: string, page = 1, pageSize = 20, filters: FilePreviewFilter[] = []) => {
     const params = new URLSearchParams({ page: String(page), limit: String(pageSize) })
     if (filters.length > 0) params.set("filters", JSON.stringify(filters))
-    return apiClient.get<FilePreview>(`/data-sources/files/${encodeURIComponent(fileId)}/preview?${params.toString()}`)
+    return apiClient.get<FilePreview>(`/data-sources/files/${encodeURIComponent(fileId)}/preview?${params.toString()}`, { timeoutMs: LONG_RUNNING_TIMEOUT_MS })
   },
 }
