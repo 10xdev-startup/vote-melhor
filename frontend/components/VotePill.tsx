@@ -2,7 +2,7 @@
 
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
-import type { ClassifiedVote } from '@/types/senator'
+import type { ClassifiedVote } from '@/types/vote'
 
 /**
  * O voto de um parlamentar, com o significado na pill e a procedência no tooltip.
@@ -10,7 +10,7 @@ import type { ClassifiedVote } from '@/types/senator'
  * A cor separa, não julga: `Sim` não é verde e `Não` não é vermelho, porque isso sugeriria
  * que aprovar é bom e rejeitar é ruim — contra o princípio de neutralidade política.
  *
- * O tooltip guarda a sigla que o Senado publicou e o texto oficial sem edição. Assim a
+ * O tooltip guarda o código que a fonte publicou e o texto oficial sem edição. Assim a
  * paráfrase curta (que existe só para caber na linha) nunca vira a única versão na tela.
  *
  * Precisa de um `TooltipProvider` acima na árvore.
@@ -34,7 +34,7 @@ export function voteStyleKey(vote: ClassifiedVote): string {
   return 'absent'
 }
 
-export function VotePill({ vote }: { vote: ClassifiedVote }) {
+export function VotePill({ vote, sourceName = 'Senado Federal' }: { vote: ClassifiedVote; sourceName?: string }) {
   const pill = (
     <span className={cn('inline-flex shrink-0 items-center rounded-full border px-2.5 py-0.5 text-[11px] font-semibold', VOTE_STYLE[voteStyleKey(vote)])}>
       {vote.label}
@@ -57,10 +57,10 @@ export function VotePill({ vote }: { vote: ClassifiedVote }) {
           <>
             {' — '}
             {vote.officialLabel}
-            <span className="mt-1 block text-muted-foreground">Tabela de tipos de comparecimento do Senado Federal</span>
+            <span className="mt-1 block text-muted-foreground">Fonte: {sourceName}</span>
           </>
         ) : (
-          <span className="mt-1 block text-muted-foreground">Código publicado pelo Senado, sem descrição na tabela oficial</span>
+          <span className="mt-1 block text-muted-foreground">Código publicado por {sourceName}, sem descrição adicional na fonte</span>
         )}
       </TooltipContent>
     </Tooltip>

@@ -1,4 +1,5 @@
-import type { ClassifiedVote, VotacaoTally } from "@/types/senator"
+import type { VotacaoTally } from "@/types/senator"
+import type { ClassifiedVote } from "@/types/vote"
 
 /** O que o plenário decidiu. `null` quando a fonte não informa (5 de 585 no recorte). */
 export type VotacaoResult = "approved" | "rejected" | null

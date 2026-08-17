@@ -7,7 +7,7 @@ import { VotePill } from '@/components/VotePill'
 import { countByParty, PartyFilter } from '@/components/PartyFilter'
 import { cn } from '@/lib/utils'
 import { formatSessionDate } from '@/lib/senadoFormat'
-import { countByTheme, matchesTheme, normalizeForSearch, SENADO_THEMES } from '@/lib/senadoThemes'
+import { countThemesInTexts, LEGISLATIVE_THEMES, matchesTheme, normalizeForSearch } from '@/lib/legislativeThemes'
 import { votacaoService } from '@/services/votacaoService'
 import type { MateriaGroup, VotacaoDetail, VotacaoSenatorVote, VotacaoSummary, VotacoesPayload } from '@/types/votacao'
 
@@ -304,12 +304,12 @@ export function PautasPanel() {
     }
   }, [])
 
-  const themeCounts = useMemo(() => countByTheme(payload?.materias ?? []), [payload])
+  const themeCounts = useMemo(() => countThemesInTexts((payload?.materias ?? []).map((materia) => `${materia.identification} ${materia.summary ?? ''}`)), [payload])
 
   const matches = useMemo(() => {
     if (!payload) return []
     const term = normalizeForSearch(query.trim())
-    const activeTheme = SENADO_THEMES.find((item) => item.id === theme)
+    const activeTheme = LEGISLATIVE_THEMES.find((item) => item.id === theme)
 
     return payload.materias
       .filter((materia) => (onlyContested ? materia.contestedCount > 0 : true))
@@ -348,7 +348,7 @@ export function PautasPanel() {
         {/* Tema e conjunto de radicais, nao busca de frase: a ementa da PEC 6/2019 fala em
             "previdência social" e nunca em "reforma da previdência". */}
         <div className="flex flex-wrap items-center gap-1.5">
-          {SENADO_THEMES.map((item) => {
+          {LEGISLATIVE_THEMES.map((item) => {
             const count = themeCounts[item.id] ?? 0
             const active = theme === item.id
             return (

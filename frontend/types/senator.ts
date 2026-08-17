@@ -1,18 +1,6 @@
-/** Espelha `backend/src/types/senadoVote.ts` — as categorias que o backend normaliza. */
-export type VoteCategory = "voted" | "present_not_voted" | "absent" | "not_eligible" | "secret" | "unclassified"
+import type { ClassifiedVote } from '@/types/vote'
 
-export type VoteChoice = "yes" | "no" | "abstention" | "obstruction"
-
-export interface ClassifiedVote {
-  /** Sigla exatamente como o Senado publicou. */
-  officialCode: string
-  category: VoteCategory
-  choice: VoteChoice | null
-  /** Rótulo curto da 10xGov, para caber na linha. */
-  label: string
-  /** Texto oficial sem edição. `null` nos códigos que o Senado não documenta. */
-  officialLabel: string | null
-}
+export type { ClassifiedVote, VoteCategory, VoteChoice } from '@/types/vote'
 
 export interface VotacaoTally {
   yes: number

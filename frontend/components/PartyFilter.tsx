@@ -18,11 +18,16 @@ export interface PartyCount {
   count: number
 }
 
-export function PartyFilter({ parties, selected, onSelect }: { parties: PartyCount[]; selected: string | null; onSelect: (party: string | null) => void }) {
-  if (parties.length === 0) return null
+interface FilterCount {
+  value: string
+  count: number
+}
+
+function CountFilter({ ariaLabel, items, selected, onSelect, allLabel }: { ariaLabel: string; items: FilterCount[]; selected: string | null; onSelect: (value: string | null) => void; allLabel: string }) {
+  if (items.length === 0) return null
 
   return (
-    <div className="flex flex-wrap items-center gap-1.5">
+    <div role="group" aria-label={ariaLabel} className="flex flex-wrap items-center gap-1.5">
       <button
         type="button"
         onClick={() => onSelect(null)}
@@ -32,24 +37,37 @@ export function PartyFilter({ parties, selected, onSelect }: { parties: PartyCou
           selected === null ? 'border-foreground/20 bg-foreground/5 text-foreground' : 'bg-card text-muted-foreground hover:bg-muted/60'
         )}
       >
-        Todos
+        {allLabel}
       </button>
-      {parties.map(({ party, count }) => (
+      {items.map(({ value, count }) => (
         <button
-          key={party}
+          key={value}
           type="button"
-          onClick={() => onSelect(selected === party ? null : party)}
-          aria-pressed={selected === party}
+          onClick={() => onSelect(selected === value ? null : value)}
+          aria-pressed={selected === value}
           className={cn(
             'rounded-full border px-2.5 py-1 text-[11px] font-semibold tabular-nums transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-            selected === party ? 'border-foreground/20 bg-foreground/5 text-foreground' : 'bg-card text-muted-foreground hover:bg-muted/60'
+            selected === value ? 'border-foreground/20 bg-foreground/5 text-foreground' : 'bg-card text-muted-foreground hover:bg-muted/60'
           )}
         >
-          {party} <span className="font-normal opacity-60">{count}</span>
+          {value} <span className="font-normal opacity-60">{count}</span>
         </button>
       ))}
     </div>
   )
+}
+
+export function PartyFilter({ parties, selected, onSelect }: { parties: PartyCount[]; selected: string | null; onSelect: (party: string | null) => void }) {
+  return <CountFilter ariaLabel="Filtrar por partido" items={parties.map(({ party, count }) => ({ value: party, count }))} selected={selected} onSelect={onSelect} allLabel="Todos" />
+}
+
+export interface StateCount {
+  state: string
+  count: number
+}
+
+export function StateFilter({ states, selected, onSelect }: { states: StateCount[]; selected: string | null; onSelect: (state: string | null) => void }) {
+  return <CountFilter ariaLabel="Filtrar deputados por estado" items={states.map(({ state, count }) => ({ value: state, count }))} selected={selected} onSelect={onSelect} allLabel="Todos os estados" />
 }
 
 /** Conta parlamentares por partido e ordena por contagem, desempatando alfabeticamente. */
@@ -62,4 +80,16 @@ export function countByParty(items: Array<{ party: string | null }>): PartyCount
   return [...counts.entries()]
     .map(([party, count]) => ({ party, count }))
     .sort((a, b) => (b.count - a.count) || a.party.localeCompare(b.party, 'pt-BR'))
+}
+
+/** Conta parlamentares por UF e mantém a ordem alfabética dos estados. */
+export function countByState(items: Array<{ state: string | null }>): StateCount[] {
+  const counts = new Map<string, number>()
+  for (const item of items) {
+    if (!item.state) continue
+    counts.set(item.state, (counts.get(item.state) ?? 0) + 1)
+  }
+  return [...counts.entries()]
+    .map(([state, count]) => ({ state, count }))
+    .sort((a, b) => a.state.localeCompare(b.state, 'pt-BR'))
 }
