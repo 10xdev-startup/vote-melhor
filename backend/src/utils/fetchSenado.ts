@@ -1,5 +1,5 @@
 import { AppError } from '@/utils/AppError'
-import type { SenadoRawSenator, SenadoRawVotacao, SenadoRawVote } from '@/types/senado'
+import type { SenadoRawProcess, SenadoRawSenator, SenadoRawVotacao, SenadoRawVote } from '@/types/senado'
 
 /**
  * Cliente da API de dados abertos do Senado.
@@ -30,8 +30,14 @@ interface CachedSenators {
   sourceVersion: string | null
 }
 
+interface CachedProcess {
+  expiresAt: number
+  process: SenadoRawProcess | null
+}
+
 const votacoesByYear = new Map<number, CachedYear>()
 let senatorsCache: CachedSenators | null = null
+const processCache = new Map<string, CachedProcess>()
 
 function readString(value: unknown): string | null {
   if (typeof value === 'string') {
@@ -189,6 +195,42 @@ export async function fetchCurrentSenators(): Promise<{ senators: SenadoRawSenat
   return { senators, sourceVersion }
 }
 
+function toRawProcess(value: unknown): SenadoRawProcess | null {
+  const row = readRecord(value)
+  const identification = readString(row?.['identificacao'])
+  const matterCode = readNumber(row?.['codigoMateria'])
+  if (identification === null || matterCode === null) return null
+  const processing = readString(row?.['tramitando'])
+  return {
+    identification,
+    popularName: readString(row?.['apelido']),
+    matterCode,
+    presentedAt: readString(row?.['dataApresentacao']),
+    status: readString(row?.['situacaoAtual']),
+    statusAt: readString(row?.['dataSituacaoAtual']),
+    sourceUpdatedAt: readString(row?.['dataUltimaAtualizacao']),
+    processing: processing === null ? null : processing === 'Sim',
+    objective: readString(row?.['objetivo']),
+    documentUrl: toHttps(readString(row?.['urlDocumento'])),
+  }
+}
+
+/** Uma matéria específica na tramitação do Senado; o filtro `numero` evita baixar o ano. */
+export async function fetchSenadoProcess(sigla: string, number: number, year: number): Promise<SenadoRawProcess | null> {
+  const key = `${sigla}-${number}-${year}`
+  const cached = processCache.get(key)
+  if (cached && cached.expiresAt > Date.now()) return cached.process
+
+  const query = new URLSearchParams({ sigla, numero: String(number), ano: String(year) })
+  const payload = await requestJson(`/processo?${query.toString()}`, `tramitação de ${sigla} ${number}/${year}`)
+  if (!Array.isArray(payload)) throw new AppError(502, 'O Senado devolveu a tramitação em formato inesperado', 'SOURCE_INVALID_RESPONSE')
+
+  const identification = `${sigla} ${number}/${year}`
+  const process = payload.map(toRawProcess).find((item) => item?.identification === identification) ?? null
+  processCache.set(key, { expiresAt: Date.now() + CACHE_TTL_MS, process })
+  return process
+}
+
 /**
  * Primeiro ano do recorte que a 10xGov consome. Duas razoes medidas:
  *
@@ -233,4 +275,5 @@ export function isNominalVotacao(votacao: SenadoRawVotacao): boolean {
 export function clearSenadoCache(): void {
   votacoesByYear.clear()
   senatorsCache = null
+  processCache.clear()
 }

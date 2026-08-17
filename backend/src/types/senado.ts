@@ -41,6 +41,20 @@ export interface SenadoRawSenator {
   mandateEndsAt: string | null
 }
 
+/** Retrato atual de uma matéria no endpoint `/processo`. */
+export interface SenadoRawProcess {
+  identification: string
+  popularName: string | null
+  matterCode: number
+  presentedAt: string | null
+  status: string | null
+  statusAt: string | null
+  sourceUpdatedAt: string | null
+  processing: boolean | null
+  objective: string | null
+  documentUrl: string | null
+}
+
 /** Retrospecto de um senador, pronto para a tela. */
 export interface SenatorSummary {
   code: number
