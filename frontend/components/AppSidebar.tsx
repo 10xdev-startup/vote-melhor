@@ -23,8 +23,10 @@ const NAV_ITEMS = [
   { href: '/camara', title: 'Câmara', icon: '🏛️' },
   { href: '/senado', title: 'Senado', icon: '🗳️' },
   { href: '/fonte-de-dados', title: 'Fonte de dados', icon: '🗂️' },
-  { href: '/inicio', title: 'Início', icon: '🏠' },
-  { href: '/componentes', title: 'Componentes', icon: '🧩' },
+  // Fora da navegacao, nao deletados: `/inicio` (vitrine do template) e `/componentes`
+  // continuam existindo e acessiveis pela URL — so nao aparecem na sidebar do produto.
+  // { href: '/inicio', title: 'Início', icon: '🏠' },
+  // { href: '/componentes', title: 'Componentes', icon: '🧩' },
 ]
 
 const SIDEBAR_MODE_KEY = 'sidebar-mode'
