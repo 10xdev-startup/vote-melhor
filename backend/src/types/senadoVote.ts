@@ -13,33 +13,7 @@
  *
  * `secret`, `not_eligible` e `unclassified` ficam FORA do denominador de presenca.
  */
-export type VoteCategory =
-  | 'voted'
-  | 'present_not_voted'
-  | 'absent'
-  | 'not_eligible'
-  | 'secret'
-  | 'unclassified'
-
-/** Escolha do parlamentar quando houve voto de conteudo conhecido. */
-export type VoteChoice = 'yes' | 'no' | 'abstention' | 'obstruction'
-
-/**
- * Um voto depois de normalizado.
- *
- * `officialCode` e `officialLabel` nunca sao editados: `label` e curadoria da 10xGov para
- * caber na linha, e a UI mostra o texto oficial ao lado (blueprint — toda resposta cita a
- * fonte). `officialLabel` e `null` nos codigos que a `ListaTiposComparecimento` nao cobre,
- * que sao justamente os de voto (`Sim`, `Nao`, `Abstencao`, `Obstrucao`) e o `MERC`.
- */
-export interface ClassifiedVote {
-  officialCode: string
-  category: VoteCategory
-  /** Preenchido so quando `category === 'voted'`. */
-  choice: VoteChoice | null
-  label: string
-  officialLabel: string | null
-}
+export type { ClassifiedVote, VoteCategory, VoteChoice } from '@/types/vote'
 
 /**
  * Placar de uma votacao nominal.
