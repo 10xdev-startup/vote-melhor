@@ -241,13 +241,15 @@ a entidade Partido precisa de identidade estável com aliases — não basta a s
 
 ## 8. O achado que muda a ordem de construção
 
-**O Senado nunca votou o fim da escala 6x1.** Zero votações nominais sobre jornada em 35
-anos de série.
+**O Senado ainda não votou nominalmente o fim da escala 6x1.** A série continua com zero
+votações nominais sobre jornada, mas a matéria aprovada pela Câmara já chegou à Casa
+revisora.
 
 O tema existe — em tramitação, parado:
 
 | Matéria | Apresentada | Situação em 16/08/2026 |
 | --- | --- | --- |
+| **PEC 221/2019** — texto da Câmara, apelidado `Fim da escala 6x1` | 28/05/2026 | `AGUARDANDO DESPACHO` |
 | **PEC 4/2025** — reduz jornada para 40h, teto de 8h diárias | 11/02/2025 | `AGUARDANDO DESPACHO` |
 | PL 1927/2026 | 22/04/2026 | `AGUARDANDO DESPACHO` |
 | PEC 12/2026 — empregado *escolhe* a jornada | 28/05/2026 | `AGUARDANDO DESIGNAÇÃO DO RELATOR` |
@@ -262,7 +264,10 @@ usuário busca "6x1" e recebe vazio — não por falta de dado, mas porque a per
 é "como votaram", é "por que não votaram".
 
 `/processo` entrega ementa, autoria com partido e UF, `situacaoAtual`, `tramitando` e
-`urlDocumento` — link direto para o PDF oficial. Volume de 2026: 417 `PL`, 44 `PLP`, 10 `PEC`.
+`urlDocumento` — link direto para o PDF oficial. Com o filtro exato
+`?sigla=PEC&numero=221&ano=2019`, a fonte devolve a matéria `174386`, objetivo `Revisora`,
+situação desde 28/05/2026 e última atualização em 08/07/2026. Volume de 2026: 417 `PL`, 44
+`PLP`, 10 `PEC`.
 
 ---
 
@@ -286,5 +291,3 @@ apagar o plano**, revisar com o dado na mão:
 - As votações perdidas de 2015–2016 existem em algum outro endpoint, ou sumiram da base?
 - `/orientacaoBancada` cobre quantos anos para trás? Testado só em 2025 e 2026.
 - Votações em comissão (`/votacaoComissao/*`) têm o mesmo vocabulário de voto do plenário?
-- A PEC do 6x1 aprovada na Câmara chega ao Senado como matéria nova ou como emenda a uma
-  das quatro acima?
