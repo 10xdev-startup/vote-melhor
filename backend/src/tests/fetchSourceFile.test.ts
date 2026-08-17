@@ -13,12 +13,13 @@ beforeEach(() => {
   mockedHttpsGet.mockReset()
 })
 
-function mockResponse(statusCode: number, body = ''): void {
+function mockResponse(statusCode: number, body = '', headers: IncomingMessage['headers'] = {}): void {
   mockedHttpsGet.mockImplementationOnce(((_url: URL, _options: unknown, callback: (response: IncomingMessage) => void) => {
     const request = new EventEmitter() as ClientRequest
     const stream = new PassThrough()
     const response = stream as unknown as IncomingMessage
     response.statusCode = statusCode
+    response.headers = headers
 
     queueMicrotask(() => {
       callback(response)
@@ -30,7 +31,7 @@ function mockResponse(statusCode: number, body = ''): void {
 }
 
 describe('fetchSourceFile', () => {
-  it.each(['www.senado.gov.br', 'www12.senado.leg.br'])(
+  it.each(['www.senado.gov.br', 'www12.senado.leg.br', 'legis.senado.leg.br'])(
     'forca TLS 1.2 no host afetado %s e devolve os bytes',
     async (hostname) => {
       mockResponse(200, 'conteudo')
@@ -62,6 +63,18 @@ describe('fetchSourceFile', () => {
 
     const options = mockedHttpsGet.mock.calls[0]?.[1]
     expect(options).not.toHaveProperty('maxVersion')
+  })
+
+  it('segue o redirect da origem — node:https nao faz isso sozinho', async () => {
+    // Varios endpoints do Senado respondem 301 para um JSON estatico; sem seguir, o corpo
+    // volta vazio e o parser acusa erro de formato.
+    mockResponse(301, '', { location: 'https://www.senado.gov.br/destino.csv' })
+    mockResponse(200, 'conteudo final')
+
+    await expect(fetchSourceFile('https://www.senado.gov.br/origem.csv')).resolves.toEqual(
+      Buffer.from('conteudo final'),
+    )
+    expect(mockedHttpsGet).toHaveBeenCalledTimes(2)
   })
 
   it('traduz status da origem em erro 502 estavel', async () => {

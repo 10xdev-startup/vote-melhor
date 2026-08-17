@@ -1,19 +1,45 @@
-import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals'
+import { EventEmitter } from 'node:events'
+import { PassThrough } from 'node:stream'
+import { get as httpsGet } from 'node:https'
+import type { ClientRequest, IncomingMessage } from 'node:http'
+import { beforeEach, describe, expect, it, jest } from '@jest/globals'
 import { clearSenadoCache, fetchSenadoProcess } from '@/utils/fetchSenado'
 
-const originalFetch = global.fetch
+// Mocka `node:https`, nao `global.fetch`: o cliente do Senado passou a usar o
+// `officialHttpGet` por causa do handshake TLS que nao fecha em legis.senado.leg.br.
+// Com o mock no `fetch`, este teste sairia para a rede de verdade sem avisar.
+jest.mock('node:https', () => ({ get: jest.fn() }))
 
-beforeEach(() => clearSenadoCache())
+const mockedHttpsGet = httpsGet as jest.MockedFunction<typeof httpsGet>
 
-afterEach(() => {
-  global.fetch = originalFetch
+beforeEach(() => {
+  mockedHttpsGet.mockReset()
+  clearSenadoCache()
 })
+
+function mockJsonResponse(payload: unknown, assertUrl?: (url: string) => void): void {
+  mockedHttpsGet.mockImplementationOnce(((url: URL, _options: unknown, callback: (response: IncomingMessage) => void) => {
+    assertUrl?.(String(url))
+
+    const request = new EventEmitter() as ClientRequest
+    const stream = new PassThrough()
+    const response = stream as unknown as IncomingMessage
+    response.statusCode = 200
+    response.headers = { 'content-type': 'application/json' }
+
+    queueMicrotask(() => {
+      callback(response)
+      stream.end(JSON.stringify(payload))
+    })
+
+    return request
+  }) as typeof httpsGet)
+}
 
 describe('fetchSenadoProcess', () => {
   it('consulta uma matéria pelo número e preserva status, frescor e documento oficial', async () => {
-    const mockedFetch = jest.fn(async (input: string | URL | Request): Promise<Response> => {
-      expect(String(input)).toContain('/processo?sigla=PEC&numero=221&ano=2019')
-      return new Response(JSON.stringify([
+    mockJsonResponse(
+      [
         {
           apelido: 'Fim da escala 6x1',
           codigoMateria: 174386,
@@ -26,9 +52,9 @@ describe('fetchSenadoProcess', () => {
           tramitando: 'Sim',
           urlDocumento: 'http://legis.senado.gov.br/documento.pdf',
         },
-      ]), { status: 200, headers: { 'Content-Type': 'application/json' } })
-    })
-    global.fetch = mockedFetch as typeof fetch
+      ],
+      (url) => expect(url).toContain('/processo?sigla=PEC&numero=221&ano=2019')
+    )
 
     await expect(fetchSenadoProcess('PEC', 221, 2019)).resolves.toEqual({
       identification: 'PEC 221/2019',
@@ -45,7 +71,7 @@ describe('fetchSenadoProcess', () => {
   })
 
   it('devolve null quando a matéria não existe no filtro', async () => {
-    global.fetch = jest.fn(async (): Promise<Response> => new Response('[]', { status: 200 })) as typeof fetch
+    mockJsonResponse([])
     await expect(fetchSenadoProcess('PEC', 221, 2019)).resolves.toBeNull()
   })
 })

@@ -1,16 +1,18 @@
 import { AppError } from '@/utils/AppError'
+import { officialHttpGet, type OfficialHttpResponse } from '@/utils/officialHttpGet'
 import type { SenadoRawProcess, SenadoRawSenator, SenadoRawVotacao, SenadoRawVote } from '@/types/senado'
 
 /**
  * Cliente da API de dados abertos do Senado.
  *
- * Host diferente do `fetchSourceFile`: aqui e `legis.senado.leg.br`, que fecha handshake TLS
- * 1.3 normalmente (~0,35s). O downgrade para TLS 1.2 vale so para `www.senado.gov.br` e
- * `www12.senado.leg.br` — ver `investigacao-tls-senado.plan.md`. Por isso este cliente usa o
- * `fetch` global, como o da Fazenda de SP.
+ * Vai pelo `officialHttpGet`, nao pelo `fetch` global: `legis.senado.leg.br` sofre do mesmo
+ * problema de TLS dos outros hosts do Senado — o ClientHello TLS 1.3 do Node nao conclui
+ * handshake e toda chamada morria em `UND_ERR_CONNECT_TIMEOUT` apos ~10,5s. Medido: sem flag
+ * estoura 3/3; com TLS 1.2 responde em ~0,3s. Ver `investigacao-tls-senado.md`.
  *
- * `redirect: 'follow'` nao e detalhe: varios endpoints do Senado respondem 301 para um JSON
- * estatico. Sem seguir, o corpo volta vazio e o parser acusa erro de formato.
+ * Seguir redirect nao e detalhe: varios endpoints do Senado respondem 301 para um JSON
+ * estatico. Sem seguir, o corpo volta vazio e o parser acusa erro de formato — por isso o
+ * `officialHttpGet` trata isso, ja que `node:https` nao segue sozinho.
  */
 
 const BASE_URL = 'https://legis.senado.leg.br/dadosabertos'
@@ -72,12 +74,11 @@ function toHttps(value: string | null): string | null {
 }
 
 async function requestJson(path: string, context: string): Promise<unknown> {
-  let response: Response
+  let response: OfficialHttpResponse
   try {
-    response = await fetch(`${BASE_URL}${path}`, {
-      headers: { Accept: 'application/json', 'User-Agent': '10xGov/1.0 (+https://github.com/10xdev/10x-gov)' },
-      redirect: 'follow',
-      signal: AbortSignal.timeout(SOURCE_TIMEOUT_MS),
+    response = await officialHttpGet(`${BASE_URL}${path}`, {
+      headers: { Accept: 'application/json' },
+      timeoutMs: SOURCE_TIMEOUT_MS,
     })
   } catch (error) {
     if (error instanceof Error && (error.name === 'TimeoutError' || error.name === 'AbortError')) {
@@ -88,14 +89,16 @@ async function requestJson(path: string, context: string): Promise<unknown> {
     throw new AppError(502, 'A API do Senado não respondeu', 'SOURCE_UNAVAILABLE')
   }
 
-  if (!response.ok) throw new AppError(502, `O Senado respondeu ${response.status}`, 'SOURCE_UNAVAILABLE')
+  if (response.status < 200 || response.status >= 300) {
+    throw new AppError(502, `O Senado respondeu ${response.status}`, 'SOURCE_UNAVAILABLE')
+  }
 
-  const declaredLength = Number(response.headers.get('content-length'))
+  const declaredLength = Number(response.headers['content-length'])
   if (Number.isFinite(declaredLength) && declaredLength > MAX_RESPONSE_BYTES) {
     throw new AppError(502, 'A resposta do Senado excedeu o limite de segurança', 'SOURCE_TOO_LARGE')
   }
 
-  const body = await response.text()
+  const body = response.body.toString('utf-8')
   // Endpoint legado do Senado responde 200 com corpo vazio em vez de erro. Tratar como
   // sucesso registraria "zero votacoes" silenciosamente.
   if (body.trim().length === 0) throw new AppError(502, 'O Senado devolveu uma resposta vazia', 'SOURCE_EMPTY_RESPONSE')
