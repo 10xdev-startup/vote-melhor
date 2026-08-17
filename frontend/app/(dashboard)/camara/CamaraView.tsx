@@ -49,12 +49,9 @@ export function CamaraView() {
   return (
     <TooltipProvider delayDuration={150}>
       <div className="flex flex-col gap-5">
-        <header>
-          <h1 className="text-[1.6rem] font-semibold tracking-[-0.02em]">Câmara dos Deputados</h1>
-          <p className="mt-1 max-w-[68ch] text-sm leading-relaxed text-muted-foreground">
-            Quem são os 513 deputados em exercício, o que o Plenário votou e quais escolhas individuais a Câmara publicou em 2026. A fonte não lista ausentes, então a 10xGov não calcula taxa de participação.
-          </p>
-        </header>
+        {/* A pagina abre direto nas abas. O h1 fica so para leitor de tela: sem ele o
+            documento perde o titulo principal e a navegacao por cabecalho quebra. */}
+        <h1 className="sr-only">Câmara dos Deputados</h1>
 
         <div role="tablist" aria-label="Visões das votações da Câmara" className="flex w-fit rounded-lg border bg-muted/40 p-1">
           {TABS.map((tab) => (
