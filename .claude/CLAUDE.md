@@ -301,7 +301,7 @@ de `(dashboard)`.
 - `backend/src/database/supabase.ts` — configuracao do client (service-role)
 - `backend/src/middleware/` — `supabaseMiddleware` (auth), `requireRole`/`requireAdmin`, `errorHandler`
 - `backend/src/{routes,controllers,models}/User*` — dominio de referencia `user` (molde Controller → Model → Database)
-- `backend/src/utils/fetchSourceFile.ts` — baixa arquivo de orgao oficial. Usa `node:https` (nao `fetch`) e fixa `maxVersion: 'TLSv1.2'` **so** em `www.senado.gov.br`: o ClientHello TLS 1.3 do Node nao conclui handshake com aquele host e o `fetch` global estoura em ~10,5s. Nao remova nem generalize sem ler `.cursor/plans/fazendo/fonte-de-dados/investigacao-tls-senado.md`
+- `backend/src/utils/officialHttpGet.ts` — **unico** ponto que fala com origem oficial. Usa `node:https` (nao `fetch`) porque fixa `maxVersion: 'TLSv1.2'` nos hosts do Senado (`www.senado.gov.br`, `www12.senado.leg.br`, `legis.senado.leg.br`): com TLS 1.3 o handshake nao conclui e toda chamada estoura em ~10,5s. Tambem segue redirect, que `node:https` nao faz sozinho. Cliente novo de orgao passa por aqui — quando cada um tinha o proprio transporte, um documentou o oposto do medido e ficou quebrado. Nao remova nem generalize sem ler `.cursor/plans/fazendo/fonte-de-dados/investigacao-tls-senado.md`
 - `frontend/services/` — `apiClient` (transporte wrapped) + `userService` (molde de dominio)
 
 ## Skill routing

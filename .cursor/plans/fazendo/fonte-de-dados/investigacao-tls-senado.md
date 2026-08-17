@@ -7,8 +7,8 @@ isProject: false
 
 # `Handshake TLS travando com www.senado.gov.br`
 
-> **Leia antes de "limpar" o `maxVersion: 'TLSv1.2'` de `backend/src/utils/fetchSourceFile.ts`.**
-> Aquilo nao e sobra de debug: e o unico motivo de o preview funcionar.
+> **Leia antes de "limpar" o `maxVersion: 'TLSv1.2'` de `backend/src/utils/officialHttpGet.ts`.**
+> Aquilo nao e sobra de debug: e o unico motivo de o preview e da API do Senado funcionarem.
 
 ---
 
@@ -111,9 +111,41 @@ foi isolada. Isolar exigiria capturar e comparar os dois ClientHello no fio.
 
 ---
 
+## Hosts afetados (medidos)
+
+O problema **nao e de um host so** — foi encontrado tres vezes, e a suposicao de que um host
+novo estava livre ja custou uma investigacao repetida:
+
+| Host | Sintoma sem flag | Com TLS 1.2 |
+| --- | --- | --- |
+| `www.senado.gov.br` | `UND_ERR_CONNECT_TIMEOUT` ~10,5s | 200 em ~0,3s |
+| `www12.senado.leg.br` | idem | idem |
+| `legis.senado.leg.br` (API de dados abertos) | idem, 3/3 tentativas | 200 em ~0,3s |
+
+**Nao presuma pelo dominio.** `dadosabertos.camara.leg.br` responde normal com `fetch` global
+(200 em ~1,3s), entao o problema nao e "governo brasileiro" nem ".leg.br" — e daquele
+balanceador. Meça o host novo com o teste minimo antes de adiciona-lo.
+
+O `fetchSenado` chegou a documentar que `legis.senado.leg.br` "fecha handshake TLS 1.3
+normalmente (~0,35s)" e por isso usava `fetch` global. A medicao desmentiu: 3/3 estouram. A
+licao pratica e que **a lista de hosts afetados so cresce por medicao, e so encolhe por
+medicao**.
+
+---
+
 ## Solucao adotada
 
-`backend/src/utils/fetchSourceFile.ts`, com **`node:https`** em vez de `fetch`.
+`backend/src/utils/officialHttpGet.ts` — **um unico ponto** que conhece as peculiaridades de
+transporte das origens oficiais, com **`node:https`** em vez de `fetch`. Usado pelo
+`fetchSourceFile` (arquivos do catalogo) e pelo `fetchSenado` (API de dados abertos).
+
+Centralizar nao foi preferencia de estilo: enquanto cada cliente carregava a propria decisao
+de transporte, um deles documentou o oposto do que a medicao mostrava e passou meses
+quebrado em silencio.
+
+Alem do TLS, o `officialHttpGet` trata **redirect**: `node:https` nao segue sozinho, e varios
+endpoints do Senado respondem 301 para um JSON estatico — sem seguir, o corpo volta vazio e o
+parser acusa erro de formato.
 
 Por que `node:https` e nao a dependencia `undici`:
 
@@ -124,15 +156,15 @@ Por que `node:https` e nao a dependencia `undici`:
 O downgrade e **por host**, nunca global:
 
 ```ts
-const TLS_1_2_ONLY_HOSTS = new Set(['www.senado.gov.br'])
+const TLS_1_2_ONLY_HOSTS = new Set(['www.senado.gov.br', 'www12.senado.leg.br', 'legis.senado.leg.br'])
 
 if (TLS_1_2_ONLY_HOSTS.has(parsedUrl.hostname)) {
-  options.maxVersion = 'TLSv1.2'
+  requestOptions.maxVersion = 'TLSv1.2'
 }
 ```
 
-`www12.senado.leg.br` (os 36 demonstrativos contabeis) **nao** entra na lista: segue com
-negociacao padrao, TLS 1.3 incluso.
+Todo host fora dessa lista — `dadosabertos.camara.leg.br` inclusive — segue com negociacao
+padrao, TLS 1.3 incluso.
 
 ---
 
@@ -153,7 +185,8 @@ negociacao padrao, TLS 1.3 incluso.
 
 Rode o teste minimo acima **sem** `--tls-max-v1.2`. Se voltar `status: 200`, tire o host de
 `TLS_1_2_ONLY_HOSTS` e rode `npm test -w backend -- src/tests/fetchSourceFile.test.ts`.
-Enquanto o teste minimo estourar, o workaround continua necessario.
+Enquanto o teste minimo estourar, o workaround continua necessario. Vale host a host: um
+pode ser corrigido antes dos outros.
 
 ---
 
