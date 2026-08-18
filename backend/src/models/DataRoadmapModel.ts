@@ -61,7 +61,7 @@ const FUTURE_SECTIONS: DataRoadmapSection[] = [
   {
     id: 'senate-next',
     title: 'Senado Federal — próximo núcleo',
-    description: 'Fontes oficiais já identificadas; ainda faltam contrato, normalização e visualização na 10xGov.',
+    description: 'Fontes oficiais já identificadas; ainda faltam contrato, normalização e visualização na Vote Melhor.',
     items: [
       {
         id: 'senate-members',

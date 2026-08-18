@@ -146,7 +146,7 @@ describe("FonteDeDadosView", () => {
     expect(window.location.search).toBe("?tab=sumario")
     expect(screen.getByText("Senado Federal — próximo núcleo")).toBeInTheDocument()
     expect(screen.getByText("Câmara e controle federal")).toBeInTheDocument()
-    expect(screen.queryByText("Mapa de integrações da 10xGov")).not.toBeInTheDocument()
+    expect(screen.queryByText("Mapa de integrações da Vote Melhor")).not.toBeInTheDocument()
     expect(screen.getByText("Senado Federal — próximo núcleo").compareDocumentPosition(screen.getByText("Já disponível")) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(screen.queryByLabelText("Buscar no catálogo")).not.toBeInTheDocument()
     expect(getRoadmap).toHaveBeenCalledTimes(1)

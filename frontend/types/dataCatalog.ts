@@ -20,10 +20,10 @@ export type DataFileLayout = "tabular" | "report"
 /**
  * Um arquivo publicado por um orgao oficial — a menor unidade do catalogo.
  *
- * `name` e `description` sao curadoria da 10xGov: o portal de origem rotula todos os
+ * `name` e `description` sao curadoria da Vote Melhor: o portal de origem rotula todos os
  * arquivos como "CSV" e esconde o conteudo real dentro do nome do arquivo
  * (`BGUBPAnualOrgao2000OrgSup.csv`). `url` continua apontando para o dominio oficial —
- * a 10xGov nunca re-hospeda o arquivo.
+ * a Vote Melhor nunca re-hospeda o arquivo.
  */
 export interface DataFile {
   id: string
@@ -102,7 +102,7 @@ export interface Dataset {
   maintainer: string
   /** Pagina oficial que sustenta estes metadados — procedencia obrigatoria. */
   officialUrl: string
-  /** Data em que a 10xGov leu a pagina oficial (ISO 8601). */
+  /** Data em que a Vote Melhor leu a pagina oficial (ISO 8601). */
   collectedAt: string
   /** Em ordem cronologica crescente: a UI abre na ultima (mais recente). */
   editions: DatasetEdition[]

@@ -73,7 +73,7 @@ describe('classifyVote — as armadilhas que produzem numero errado', () => {
 })
 
 describe('classifyVote — procedencia', () => {
-  // O tooltip mostra o texto oficial; o `label` e curadoria da 10xGov porque o oficial nao
+  // O tooltip mostra o texto oficial; o `label` e curadoria da Vote Melhor porque o oficial nao
   // cabe na linha. Se o texto oficial for editado aqui, a citacao da fonte vira mentira.
   it('preserva o texto oficial sem editar, incluindo o travessao do P-NRV', () => {
     expect(classifyVote('P-NRV').officialLabel).toBe('Presente – Não registrou voto')

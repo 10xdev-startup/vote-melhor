@@ -436,7 +436,7 @@ export type SpreadsheetFormat = 'CSV' | 'JSON' | 'XLSX'
  * Le os bytes de um arquivo do catalogo e devolve as primeiras `maxRows` linhas.
  *
  * `format` vem do catalogo (nao do Content-Type nem da extensao da URL), porque e o dado que
- * a 10xGov ja curou e conferiu.
+ * a Vote Melhor ja curou e conferiu.
  */
 export function parseSpreadsheet(buffer: Buffer, format: SpreadsheetFormat, maxRows: number, offset = 0, filters: SpreadsheetFilter[] = []): ParsedSpreadsheet {
   if (buffer.length === 0) throw new SpreadsheetParseError('empty_file', 'Arquivo vazio')

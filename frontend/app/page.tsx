@@ -62,7 +62,7 @@ export default function HomePage(): React.JSX.Element {
             </div>
 
             <h1 className="lp-display mt-8 max-w-[760px] text-[2.8rem] leading-[0.99] tracking-[-0.04em] sm:text-[3.4rem] lg:text-[4rem]">
-              Os dados já são públicos. A 10xGov os torna <span className="text-[#315bff]">compreensíveis.</span>
+              Os dados já são públicos. A Vote Melhor os torna <span className="text-[#315bff]">compreensíveis.</span>
             </h1>
 
             <p className="mt-8 max-w-[560px] text-[17px] leading-7 text-[#111725]/64 md:text-lg">
@@ -243,7 +243,7 @@ export default function HomePage(): React.JSX.Element {
           </h2>
           <p className="mt-6 max-w-[600px] text-[16px] leading-7 text-white/60">
             Assim como o GitHub democratizou o acesso ao código e o Stripe simplificou pagamentos,
-            a 10xGov quer simplificar o acesso aos dados públicos brasileiros. Todo dado exposto na
+            a Vote Melhor quer simplificar o acesso aos dados públicos brasileiros. Todo dado exposto na
             interface fica acessível também via API.
           </p>
         </div>

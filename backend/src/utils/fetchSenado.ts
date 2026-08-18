@@ -235,7 +235,7 @@ export async function fetchSenadoProcess(sigla: string, number: number, year: nu
 }
 
 /**
- * Primeiro ano do recorte que a 10xGov consome. Duas razoes medidas:
+ * Primeiro ano do recorte que a Vote Melhor consome. Duas razoes medidas:
  *
  * 1. Os 54 senadores que estao na urna em out/2026 tomaram posse em 01/02/2019 — o
  *    retrospecto precisa cobrir o mandato que o eleitor esta julgando.

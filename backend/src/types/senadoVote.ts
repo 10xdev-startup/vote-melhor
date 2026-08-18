@@ -1,5 +1,5 @@
 /**
- * Como a 10xGov classifica o que o Senado registrou na coluna de voto.
+ * Como a Vote Melhor classifica o que o Senado registrou na coluna de voto.
  *
  * Sao seis porque colapsar qualquer uma produz numero errado ou injusto na tela:
  *
@@ -8,7 +8,7 @@
  * - `not_eligible`: quem nao PODIA votar. O presidente da sessao nao vota (art. 51 RISF,
  *   1.716 ocorrencias) e o impedido esta barrado pelo regimento (art. 306 RISF). Marcar
  *   como ausente seria acusar de faltar quem estava la e cumprindo o rito.
- * - `unclassified`: codigo que a 10xGov nao sabe classificar — `MERC`, que o Senado usa mas
+ * - `unclassified`: codigo que a Vote Melhor nao sabe classificar — `MERC`, que o Senado usa mas
  *   nao documenta em tabela nenhuma. Jogar no balaio de ausente seria inventar dado.
  *
  * `secret`, `not_eligible` e `unclassified` ficam FORA do denominador de presenca.

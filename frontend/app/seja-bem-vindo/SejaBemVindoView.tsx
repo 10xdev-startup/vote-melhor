@@ -42,7 +42,7 @@ export function SejaBemVindoView({
             {firstName ? `Bem-vindo, ${firstName}!` : 'Bem-vindo!'}
           </h1>
           <p className="mt-3 text-muted-foreground">
-            Sua conta está pronta. A 10xGov reúne os dados públicos da Câmara e do Senado e
+            Sua conta está pronta. A Vote Melhor reúne os dados públicos da Câmara e do Senado e
             os explica em linguagem simples — sempre com a fonte oficial ao lado.
           </p>
         </div>

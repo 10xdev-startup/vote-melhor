@@ -13,7 +13,7 @@ const AUTHORS_BY_PROPOSITION: Record<number, CamaraPropositionAuthor[]> = {
 
 /**
  * Nomes usados pelo próprio Portal da Câmara que não aparecem na ementa dos arquivos.
- * Cada alias mantém a página oficial que sustenta o rótulo exibido pela 10xGov.
+ * Cada alias mantém a página oficial que sustenta o rótulo exibido pela Vote Melhor.
  */
 const POPULAR_NAMES_BY_PROPOSITION: Record<number, CamaraPopularName[]> = {
   2233802: [

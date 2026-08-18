@@ -35,10 +35,10 @@
 
 ## Projeto
 
-**10xGov** — plataforma open source que torna os dados publicos do governo brasileiro
+**Vote Melhor** — plataforma open source que torna os dados publicos do governo brasileiro
 acessiveis, compreensiveis e utilizaveis por qualquer pessoa. Os dados ja sao publicos
 (votacoes, projetos de lei, discursos, gastos, presenca, emendas), mas estao espalhados
-por orgaos diferentes, em formatos complexos, e exigem conhecimento tecnico. A 10xGov
+por orgaos diferentes, em formatos complexos, e exigem conhecimento tecnico. A Vote Melhor
 unifica essas fontes oficiais e usa IA para organiza-las, relaciona-las e explica-las em
 linguagem simples.
 

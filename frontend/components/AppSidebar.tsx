@@ -117,7 +117,7 @@ function AppSidebar() {
   }, [])
 
   const appName = useMemo(
-    () => process.env['NEXT_PUBLIC_APP_NAME'] || '10xGov',
+    () => process.env['NEXT_PUBLIC_APP_NAME'] || 'Vote Melhor',
     []
   )
 
