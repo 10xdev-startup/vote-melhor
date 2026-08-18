@@ -67,10 +67,10 @@ jobs:
         run: |
           docker build \
             --file frontend/Dockerfile \
-            --build-arg NEXT_PUBLIC_SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL }} \
-            --build-arg NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }} \
-            --build-arg NEXT_PUBLIC_API_URL=${{ env.BACKEND_PUBLIC_URL }} \
-            --build-arg NEXT_PUBLIC_APP_NAME=${{ env.APP_NAME }} \
+            --build-arg "NEXT_PUBLIC_SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}" \
+            --build-arg "NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}" \
+            --build-arg "NEXT_PUBLIC_API_URL=${{ env.BACKEND_PUBLIC_URL }}" \
+            --build-arg "NEXT_PUBLIC_APP_NAME=${{ env.APP_NAME }}" \
             --tag ${{ env.ACR_NAME }}.azurecr.io/${{ env.FRONTEND_IMAGE }}:latest \
             .
           docker push ${{ env.ACR_NAME }}.azurecr.io/${{ env.FRONTEND_IMAGE }}:latest
