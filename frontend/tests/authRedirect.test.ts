@@ -6,29 +6,29 @@ import { normalizeRedirectTarget, welcomeHref } from "@/lib/authRedirect"
 // devolver o usuario pra uma rota do proprio fluxo de entrada.
 
 describe("normalizeRedirectTarget", () => {
-  it("cai em /inicio sem valor", () => {
-    expect(normalizeRedirectTarget(null)).toBe("/inicio")
-    expect(normalizeRedirectTarget(undefined)).toBe("/inicio")
-    expect(normalizeRedirectTarget("")).toBe("/inicio")
+  it("cai em /camara sem valor", () => {
+    expect(normalizeRedirectTarget(null)).toBe("/camara")
+    expect(normalizeRedirectTarget(undefined)).toBe("/camara")
+    expect(normalizeRedirectTarget("")).toBe("/camara")
   })
 
   it("rejeita valor repetido na query (array)", () => {
-    expect(normalizeRedirectTarget(["/inicio", "/componentes"])).toBe("/inicio")
+    expect(normalizeRedirectTarget(["/camara", "/componentes"])).toBe("/camara")
   })
 
   it("rejeita destino externo", () => {
-    expect(normalizeRedirectTarget("https://evil.com")).toBe("/inicio")
-    expect(normalizeRedirectTarget("//evil.com")).toBe("/inicio")
-    expect(normalizeRedirectTarget("evil.com")).toBe("/inicio")
+    expect(normalizeRedirectTarget("https://evil.com")).toBe("/camara")
+    expect(normalizeRedirectTarget("//evil.com")).toBe("/camara")
+    expect(normalizeRedirectTarget("evil.com")).toBe("/camara")
   })
 
   it("rejeita os bypasses que o browser normaliza", () => {
     // Comecam com '/' e nao com '//', mas o parser de URL (igual ao browser)
     // resolve os quatro pra fora do dominio.
-    expect(normalizeRedirectTarget("/\\evil.com")).toBe("/inicio")
-    expect(normalizeRedirectTarget("/\\/evil.com")).toBe("/inicio")
-    expect(normalizeRedirectTarget("/\t/evil.com")).toBe("/inicio")
-    expect(normalizeRedirectTarget("/\n/evil.com")).toBe("/inicio")
+    expect(normalizeRedirectTarget("/\\evil.com")).toBe("/camara")
+    expect(normalizeRedirectTarget("/\\/evil.com")).toBe("/camara")
+    expect(normalizeRedirectTarget("/\t/evil.com")).toBe("/camara")
+    expect(normalizeRedirectTarget("/\n/evil.com")).toBe("/camara")
   })
 
   it("nao confunde hifen com caractere perigoso", () => {
@@ -36,16 +36,16 @@ describe("normalizeRedirectTarget", () => {
   })
 
   it("rejeita as rotas do fluxo de entrada", () => {
-    expect(normalizeRedirectTarget("/login")).toBe("/inicio")
-    expect(normalizeRedirectTarget("/login?redirect=/componentes")).toBe("/inicio")
-    expect(normalizeRedirectTarget("/cadastro")).toBe("/inicio")
-    expect(normalizeRedirectTarget("/cadastro?redirect=/componentes")).toBe("/inicio")
+    expect(normalizeRedirectTarget("/login")).toBe("/camara")
+    expect(normalizeRedirectTarget("/login?redirect=/componentes")).toBe("/camara")
+    expect(normalizeRedirectTarget("/cadastro")).toBe("/camara")
+    expect(normalizeRedirectTarget("/cadastro?redirect=/componentes")).toBe("/camara")
   })
 
   it("rejeita a propria tela de boas-vindas", () => {
     // Senao vira /seja-bem-vindo?next=/seja-bem-vindo e a CTA cai nela de novo.
-    expect(normalizeRedirectTarget("/seja-bem-vindo")).toBe("/inicio")
-    expect(normalizeRedirectTarget("/seja-bem-vindo?next=/componentes")).toBe("/inicio")
+    expect(normalizeRedirectTarget("/seja-bem-vindo")).toBe("/camara")
+    expect(normalizeRedirectTarget("/seja-bem-vindo?next=/componentes")).toBe("/camara")
   })
 
   it("preserva deep link interno", () => {
@@ -59,7 +59,7 @@ describe("normalizeRedirectTarget", () => {
 // link que trouxe o usuario nao pode se perder no caminho.
 describe("welcomeHref", () => {
   it("sem deep link, vai pra tela limpa", () => {
-    expect(welcomeHref("/inicio")).toBe("/seja-bem-vindo")
+    expect(welcomeHref("/camara")).toBe("/seja-bem-vindo")
   })
 
   it("carrega o deep link no ?next=", () => {

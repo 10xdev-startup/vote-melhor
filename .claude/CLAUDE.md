@@ -35,10 +35,10 @@
 
 ## Projeto
 
-**10xGov** — plataforma open source que torna os dados publicos do governo brasileiro
+**Vote Melhor** — plataforma open source que torna os dados publicos do governo brasileiro
 acessiveis, compreensiveis e utilizaveis por qualquer pessoa. Os dados ja sao publicos
 (votacoes, projetos de lei, discursos, gastos, presenca, emendas), mas estao espalhados
-por orgaos diferentes, em formatos complexos, e exigem conhecimento tecnico. A 10xGov
+por orgaos diferentes, em formatos complexos, e exigem conhecimento tecnico. A Vote Melhor
 unifica essas fontes oficiais e usa IA para organiza-las, relaciona-las e explica-las em
 linguagem simples.
 
@@ -124,6 +124,8 @@ Backend: `ts-jest` (env node). Frontend: `next/jest` + jsdom + Testing Library. 
   - `npm test -w backend -- --findRelatedTests src/utils/apiResponse.ts` → os testes que tocam aquele arquivo (transitivo).
 - **Todo teste comeca importando os globals**: `import { describe, it, expect } from "@jest/globals"`. O projeto **nao instala `@types/jest`** de proposito — sem o import, o Jest passa e o `tsc --noEmit` quebra com dezenas de `Cannot find name 'describe'` (uma causa so). Nao "conserte" isso instalando `@types/jest`: ele injeta `describe`/`it`/`expect` no escopo global de todo o workspace (no backend, `roots: src/` faz esses nomes valerem dentro de controllers e models), desincroniza da versao do `jest` (DefinitelyTyped e versionado a parte) e colide com qualquer runner que exporte `expect`/`test` (Playwright, Vitest).
 - Mocke deps externas (`jest.mock(...)` p/ Supabase etc.); nao mocke o codigo sob teste.
+- **No frontend, `jest.mock` exige o `jest` GLOBAL — nao o de `@jest/globals`.** O hoisting (que poe o `jest.mock` acima dos imports) e feito pelo transform do SWC via `next/jest`, e ele so reconhece o identificador global. Com `import { jest } from "@jest/globals"` o mock **nao e aplicado e nada avisa**: o componente chama o service de verdade e o teste passa sem testar o que devia. Entao o import nomeado vale pra `describe/it/expect`, mas em arquivo que mocka modulo declare o global (`declare const jest: { mock: ...; fn: ... }`) — ha um exemplo em `frontend/tests/fonteDeDadosView.test.tsx`. A factory tambem nao pode referenciar variavel do arquivo (ela roda antes das declaracoes): crie as `jest.fn()` dentro dela e pegue depois pelo modulo importado.
+- **Comando de teste com saida VAZIA e suspeita de ambiente, nao bug do projeto.** O `next/jest` sobe o TypeScript como subprocesso; em sandbox sem permissao pra isso o spawn falha com `EPERM` e a saida volta vazia — sem erro legivel, como se a config estivesse quebrada. Confirme por outro caminho antes de mexer em `jest.config.mjs`. Vale pra qualquer ferramenta que gere subprocesso (`next`, `tsc`, `eslint`).
 - TDD para bug: escreva o teste que reproduz o bug **primeiro**, depois faca passar.
 - Tarefa so esta "feita" quando os testes pertinentes passam + `typecheck` + `lint`.
 
@@ -299,6 +301,7 @@ de `(dashboard)`.
 - `backend/src/database/supabase.ts` — configuracao do client (service-role)
 - `backend/src/middleware/` — `supabaseMiddleware` (auth), `requireRole`/`requireAdmin`, `errorHandler`
 - `backend/src/{routes,controllers,models}/User*` — dominio de referencia `user` (molde Controller → Model → Database)
+- `backend/src/utils/officialHttpGet.ts` — **unico** ponto que fala com origem oficial. Usa `node:https` (nao `fetch`) porque fixa `maxVersion: 'TLSv1.2'` nos hosts do Senado (`www.senado.gov.br`, `www12.senado.leg.br`, `legis.senado.leg.br`): com TLS 1.3 o handshake nao conclui e toda chamada estoura em ~10,5s. Tambem segue redirect, que `node:https` nao faz sozinho. Cliente novo de orgao passa por aqui — quando cada um tinha o proprio transporte, um documentou o oposto do medido e ficou quebrado. Nao remova nem generalize sem ler `.cursor/plans/fazendo/fonte-de-dados/investigacao-tls-senado.md`
 - `frontend/services/` — `apiClient` (transporte wrapped) + `userService` (molde de dominio)
 
 ## Skill routing

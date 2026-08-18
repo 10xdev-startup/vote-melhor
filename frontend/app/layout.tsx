@@ -7,7 +7,7 @@ import { AuthProvider } from '@/hooks/useAuth'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: '10xGov',
+  title: 'Vote Melhor',
   description: 'Descrição do projeto',
 }
 

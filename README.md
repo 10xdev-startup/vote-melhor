@@ -1,12 +1,12 @@
-# 10xGov
+# Vote Melhor
 
 ## Visão
 
-A **10xGov** é uma plataforma open source para tornar os dados públicos do governo brasileiro acessíveis, compreensíveis e utilizáveis por qualquer pessoa.
+A **Vote Melhor** é uma plataforma open source para tornar os dados públicos do governo brasileiro acessíveis, compreensíveis e utilizáveis por qualquer pessoa.
 
 Hoje, milhares de informações sobre o funcionamento do governo já são públicas: votações, projetos de lei, discursos, gastos, presença de parlamentares, eleições, emendas, licitações e muito mais. Porém, esses dados estão espalhados em diferentes órgãos, possuem formatos complexos e exigem conhecimento técnico para serem consultados.
 
-A missão da 10xGov é transformar esses dados em respostas simples, verificáveis e baseadas em fontes oficiais.
+A missão da Vote Melhor é transformar esses dados em respostas simples, verificáveis e baseadas em fontes oficiais.
 
 ---
 
@@ -30,7 +30,7 @@ Normalmente é necessário consultar diversos portais públicos, interpretar doc
 
 ## Solução
 
-A 10xGov unifica dados oficiais provenientes de diferentes órgãos governamentais e utiliza Inteligência Artificial para organizá-los, relacioná-los e explicá-los em linguagem simples.
+A Vote Melhor unifica dados oficiais provenientes de diferentes órgãos governamentais e utiliza Inteligência Artificial para organizá-los, relacioná-los e explicá-los em linguagem simples.
 
 O objetivo não é produzir opinião política, mas facilitar o acesso à informação pública.
 
@@ -107,7 +107,7 @@ Perguntas em linguagem natural como:
 
 ### APIs
 
-A 10xGov pretende disponibilizar uma API unificada sobre dados públicos brasileiros.
+A Vote Melhor pretende disponibilizar uma API unificada sobre dados públicos brasileiros.
 
 Exemplo:
 
@@ -180,7 +180,7 @@ Futuramente:
 
 Ser a principal infraestrutura aberta para dados governamentais brasileiros, permitindo que qualquer pessoa ou organização compreenda o funcionamento do Estado por meio de dados públicos, IA e APIs abertas.
 
-Assim como o GitHub democratizou o acesso ao código e o Stripe simplificou pagamentos, a 10xGov busca simplificar o acesso aos dados públicos brasileiros.
+Assim como o GitHub democratizou o acesso ao código e o Stripe simplificou pagamentos, a Vote Melhor busca simplificar o acesso aos dados públicos brasileiros.
 
 ---
 
@@ -215,7 +215,7 @@ SUPABASE_ACCESS_TOKEN=sbp_<token de management>
 
 ```bash
 NEXT_PUBLIC_API_URL=http://localhost:3001
-NEXT_PUBLIC_APP_NAME=10xGov
+NEXT_PUBLIC_APP_NAME=Vote Melhor
 NEXT_PUBLIC_SUPABASE_URL=https://<project-ref>.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=<publishable ou anon>
 ```

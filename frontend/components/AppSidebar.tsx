@@ -20,8 +20,13 @@ type SidebarMode = 'expanded' | 'collapsed' | 'hover'
 // A landing ('/') vive fora do grupo (dashboard) e nao entra aqui: a sidebar
 // e a navegacao da area logada.
 const NAV_ITEMS = [
-  { href: '/inicio', title: 'Início', icon: '🏠' },
-  { href: '/componentes', title: 'Componentes', icon: '🧩' },
+  { href: '/camara', title: 'Câmara', icon: '🏛️' },
+  { href: '/senado', title: 'Senado', icon: '🗳️' },
+  { href: '/fonte-de-dados', title: 'Fonte de dados', icon: '🗂️' },
+  // Fora da navegacao, nao deletados: `/inicio` (vitrine do template) e `/componentes`
+  // continuam existindo e acessiveis pela URL — so nao aparecem na sidebar do produto.
+  // { href: '/inicio', title: 'Início', icon: '🏠' },
+  // { href: '/componentes', title: 'Componentes', icon: '🧩' },
 ]
 
 const SIDEBAR_MODE_KEY = 'sidebar-mode'
@@ -112,7 +117,7 @@ function AppSidebar() {
   }, [])
 
   const appName = useMemo(
-    () => process.env['NEXT_PUBLIC_APP_NAME'] || '10xGov',
+    () => process.env['NEXT_PUBLIC_APP_NAME'] || 'Vote Melhor',
     []
   )
 

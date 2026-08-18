@@ -3,7 +3,8 @@
 // As rotas do proprio fluxo de entrada tambem sao rejeitadas: mandar o usuario de
 // volta pro login, pro cadastro ou pra tela de boas-vindas o devolveria ao comeco.
 
-const FALLBACK = "/inicio"
+// Primeira tela do produto. `/inicio` era a vitrine do template e saiu da sidebar.
+const FALLBACK = "/camara"
 
 // Host fixo so pra resolver o path: se o valor escapar dele, nao era relativo.
 const BASE = "https://redirect.invalid"
