@@ -119,27 +119,31 @@ function VoteRow({ row }: { row: SenatorVoteRow }) {
 }
 
 function DetailPanel({ code, onClose }: { code: number; onClose: () => void }) {
-  const [detail, setDetail] = useState<SenatorDetail | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  // Guarda o `code` junto com o resultado e deriva o que a tela mostra. Resetar por
+  // `setState` no corpo do effect dispara render em cascata (react-hooks/set-state-in-effect);
+  // derivando, trocar de senador invalida o conteudo antigo sozinho.
+  const [loaded, setLoaded] = useState<{ code: number; detail: SenatorDetail | null; error: string | null } | null>(null)
 
   useEffect(() => {
     let active = true
-    setDetail(null)
-    setError(null)
 
     senatorService
       .getSenator(code)
       .then((data) => {
-        if (active) setDetail(data)
+        if (active) setLoaded({ code, detail: data, error: null })
       })
       .catch(() => {
-        if (active) setError('Não foi possível carregar o retrospecto deste senador.')
+        if (active) setLoaded({ code, detail: null, error: 'Não foi possível carregar o retrospecto deste senador.' })
       })
 
     return () => {
       active = false
     }
   }, [code])
+
+  const current = loaded?.code === code ? loaded : null
+  const detail = current?.detail ?? null
+  const error = current?.error ?? null
 
   return (
     <section className="rounded-lg border bg-card">

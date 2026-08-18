@@ -180,29 +180,35 @@ function groupVotes(votes: VotacaoSenatorVote[]): Array<{ label: string; rows: V
 }
 
 function DetailPanel({ id, onClose }: { id: string; onClose: () => void }) {
-  const [detail, setDetail] = useState<VotacaoDetail | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [party, setParty] = useState<string | null>(null)
+  // Guarda o `id` junto com o resultado e deriva o que a tela mostra. Resetar por
+  // `setState` no corpo do effect dispara render em cascata (react-hooks/set-state-in-effect).
+  const [loaded, setLoaded] = useState<{ id: string; detail: VotacaoDetail | null; error: string | null } | null>(null)
+  // O filtro de partido tambem carrega o `id`: trocar de pauta limpa a selecao por derivacao,
+  // sem precisar de um `setParty(null)` no effect.
+  const [partyFilter, setPartyFilter] = useState<{ id: string; value: string | null } | null>(null)
 
   useEffect(() => {
     let active = true
-    setDetail(null)
-    setError(null)
-    setParty(null)
 
     votacaoService
       .getVotacao(id)
       .then((data) => {
-        if (active) setDetail(data)
+        if (active) setLoaded({ id, detail: data, error: null })
       })
       .catch(() => {
-        if (active) setError('Não foi possível carregar os votos desta pauta.')
+        if (active) setLoaded({ id, detail: null, error: 'Não foi possível carregar os votos desta pauta.' })
       })
 
     return () => {
       active = false
     }
   }, [id])
+
+  const current = loaded?.id === id ? loaded : null
+  const detail = current?.detail ?? null
+  const error = current?.error ?? null
+  const party = partyFilter?.id === id ? partyFilter.value : null
+  const setParty = (value: string | null) => setPartyFilter({ id, value })
 
   const parties = useMemo(() => countByParty(detail?.votes ?? []), [detail])
   const visible = useMemo(() => (detail ? detail.votes.filter((row) => (party ? row.party === party : true)) : []), [detail, party])
