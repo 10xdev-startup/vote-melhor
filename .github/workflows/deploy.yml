@@ -16,14 +16,14 @@ on:
   workflow_dispatch:
 
 env:
-  APP_NAME: 10xGov
-  ACR_NAME: cr10xgov # Azure Container Registry (so o nome, sem .azurecr.io)
-  RESOURCE_GROUP: resource-10xgov
-  BACKEND_APP: web-backend-10xgov # nome do Web App do backend
-  FRONTEND_APP: web-frontend-10xgov # nome do Web App do frontend
-  BACKEND_IMAGE: 10xgov-backend
-  FRONTEND_IMAGE: 10xgov-frontend
-  BACKEND_PUBLIC_URL: https://web-backend-10xgov.azurewebsites.net # backend de prod (build-arg do front)
+  APP_NAME: Vote Melhor
+  ACR_NAME: crvotemelhor # Azure Container Registry (so o nome, sem .azurecr.io)
+  RESOURCE_GROUP: resource-votemelhor
+  BACKEND_APP: web-backend-votemelhor # nome do Web App do backend
+  FRONTEND_APP: web-frontend-votemelhor # nome do Web App do frontend
+  BACKEND_IMAGE: votemelhor-backend
+  FRONTEND_IMAGE: votemelhor-frontend
+  BACKEND_PUBLIC_URL: https://web-backend-votemelhor.azurewebsites.net # backend de prod (build-arg do front)
 
 jobs:
   docker-deploy:
