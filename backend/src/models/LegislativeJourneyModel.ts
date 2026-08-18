@@ -1,6 +1,6 @@
 import { fetchSenadoProcess } from '@/utils/fetchSenado'
 import type { SenadoRawProcess } from '@/types/senado'
-import type { LegislativeJourney, LegislativeJourneyStep, LegislativeJourneyStepId } from '@/types/legislativeJourney'
+import type { LegislativeJourney, LegislativeJourneyStep } from '@/types/legislativeJourney'
 
 const SENATE_TOTAL_SEATS = 81
 const PEC_REQUIRED_VOTES = 49

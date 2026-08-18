@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it, jest } from '@jest/globals'
 import { CamaraVotingModel } from '@/models/CamaraVotingModel'
 import { fetchCamaraVotingDataset } from '@/utils/fetchCamara'
-import type { CamaraVotingDataset } from '@/types/camara'
 
 jest.mock('@/utils/fetchCamara', () => ({
   fetchCamaraVotingDataset: jest.fn(),
