@@ -82,7 +82,7 @@ async function fetchSnapshot(year: number): Promise<CachedSnapshot> {
   try {
     response = await fetch(ENDPOINT, {
       method: 'POST',
-      headers: { 'Content-Type': 'text/xml; charset=utf-8', SOAPAction: SOAP_ACTION, 'User-Agent': '10xGov/1.0 (+https://github.com/10xdev/10x-gov)' },
+      headers: { 'Content-Type': 'text/xml; charset=utf-8', SOAPAction: SOAP_ACTION, 'User-Agent': 'VoteMelhor/1.0 (+https://github.com/10xdev-startup/vote-melhor)' },
       body: buildRequestBody(year),
       signal: AbortSignal.timeout(SOURCE_TIMEOUT_MS),
     })

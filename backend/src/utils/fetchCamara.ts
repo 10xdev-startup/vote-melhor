@@ -63,7 +63,7 @@ async function requestJson(url: string, context: string): Promise<JsonResult> {
   let response: Response
   try {
     response = await fetch(url, {
-      headers: { Accept: 'application/json', 'User-Agent': '10xGov/1.0 (+https://github.com/10xdev/10x-gov)' },
+      headers: { Accept: 'application/json', 'User-Agent': 'VoteMelhor/1.0 (+https://github.com/10xdev-startup/vote-melhor)' },
       redirect: 'follow',
       signal: AbortSignal.timeout(SOURCE_TIMEOUT_MS),
     })

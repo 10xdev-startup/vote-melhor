@@ -80,7 +80,7 @@ export async function officialHttpGet(
   const requestOptions: RequestOptions = {
     signal: controller.signal,
     headers: {
-      'User-Agent': '10xGov/1.0 (+https://github.com/10xdev/10x-gov)',
+      'User-Agent': 'VoteMelhor/1.0 (+https://github.com/10xdev-startup/vote-melhor)',
       Accept: '*/*',
       ...options.headers,
     },
