@@ -1,5 +1,5 @@
 import type { ClassifiedVote, SenatorVotingRecord, VotacaoTally, VoteCategory, VoteChoice } from '@/types/senadoVote'
-import type { VotacaoResult } from '@/types/senado'
+import type { VotacaoKind, VotacaoResult } from '@/types/senado'
 
 /**
  * Normalizacao da coluna de voto do Senado.
@@ -20,7 +20,7 @@ import type { VotacaoResult } from '@/types/senado'
 interface VoteCodeEntry {
   category: VoteCategory
   choice: VoteChoice | null
-  /** Rotulo curto da 10xGov. O texto oficial longo nao cabe na linha da tabela. */
+  /** Rotulo curto da Vote Melhor. O texto oficial longo nao cabe na linha da tabela. */
   label: string
   officialLabel: string | null
 }
@@ -63,7 +63,7 @@ const VOTE_CODES: Record<string, VoteCodeEntry> = {
 /**
  * Classifica uma sigla de voto.
  *
- * Codigo desconhecido volta como `unclassified` com o proprio codigo no `label` — a 10xGov
+ * Codigo desconhecido volta como `unclassified` com o proprio codigo no `label` — a Vote Melhor
  * mostra exatamente o que o Senado publicou em vez de adivinhar uma categoria. `MERC` (5
  * ocorrencias na serie) cai aqui.
  */
@@ -123,7 +123,6 @@ export function tallyVotacao(officialCodes: readonly string[]): VotacaoTally {
  * `null` quando a descricao nao permite dizer. Sao 400 das 585 votacoes, e a maioria vota a
  * materia inteira sem sub-dispositivo — mas rotular por eliminacao seria chute.
  */
-export type VotacaoKind = 'base_text' | 'highlight' | null
 
 /**
  * Sem normalizar acento de proposito: os termos que decidem (`ressalvado`, `destaque`,

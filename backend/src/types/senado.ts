@@ -92,6 +92,9 @@ export interface SenatorDetail extends SenatorSummary {
 /** O que o plenario decidiu. `null` quando a fonte nao informa (5 de 585 no recorte). */
 export type VotacaoResult = 'approved' | 'rejected' | null
 
+/** Materia inteira (`base_text`) ou pedaco destacado (`highlight`). `null` se indefinido. */
+export type VotacaoKind = 'base_text' | 'highlight' | null
+
 /**
  * Uma votacao dentro de uma materia.
  *

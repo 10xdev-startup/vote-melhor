@@ -12,7 +12,7 @@ export const VotacaoController = {
   /** Uma pauta com o voto de cada senador (GET /votacoes/:id). */
   async detail(req: Request, res: Response): Promise<void> {
     const id = req.params['id']
-    if (!id) throw new AppError(400, 'Informe o id da votação', 'MISSING_VOTACAO_ID')
+    if (!id || Array.isArray(id)) throw new AppError(400, 'Informe o id da votação', 'MISSING_VOTACAO_ID')
 
     const votacao = await VotacaoModel.getVotacao(id)
     if (!votacao) throw new AppError(404, 'Votação não encontrada no período coberto', 'VOTACAO_NOT_FOUND')
