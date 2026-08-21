@@ -239,7 +239,7 @@ export function SenadoresPanel() {
         </p>
       )}
 
-      <div className="flex flex-col gap-3 rounded-lg border bg-card p-4 sm:flex-row sm:items-center">
+      <div className="flex flex-col gap-3 rounded-lg border bg-card p-4 sm:flex-row sm:items-end">
         <div className="relative flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -255,7 +255,7 @@ export function SenadoresPanel() {
           onClick={() => setOnlyBallot((previous) => !previous)}
           aria-pressed={onlyBallot}
           className={cn(
-            'shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors',
+            'h-10 shrink-0 rounded-full border px-3 text-xs font-semibold transition-colors',
             onlyBallot
               ? 'border-amber-300/70 bg-amber-50 text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-200'
               : 'bg-card text-muted-foreground hover:bg-muted/60'
@@ -263,9 +263,13 @@ export function SenadoresPanel() {
         >
           Só quem está na urna ({ballotCount})
         </button>
+        {parties.length > 0 && (
+          <div className="flex flex-col gap-1.5 sm:w-44">
+            <p className="text-xs font-semibold text-muted-foreground">Partido</p>
+            <PartyFilter parties={parties} selected={party} onSelect={setParty} />
+          </div>
+        )}
       </div>
-
-      {parties.length > 0 && <PartyFilter parties={parties} selected={party} onSelect={setParty} />}
 
       {error && (
         <div className="rounded-lg border border-dashed p-6 text-sm text-muted-foreground">{error}</div>

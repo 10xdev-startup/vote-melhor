@@ -1,6 +1,6 @@
 'use client'
 
-import { cn } from '@/lib/utils'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
 /**
  * Filtro por partido, compartilhado pelas telas de senadores e de pautas.
@@ -23,37 +23,26 @@ interface FilterCount {
   count: number
 }
 
+/** Sentinela do "Todos" — o Radix Select não aceita item com value vazio. */
+const ALL_VALUE = '__all__'
+
 function CountFilter({ ariaLabel, items, selected, onSelect, allLabel }: { ariaLabel: string; items: FilterCount[]; selected: string | null; onSelect: (value: string | null) => void; allLabel: string }) {
   if (items.length === 0) return null
 
   return (
-    <div role="group" aria-label={ariaLabel} className="flex flex-wrap items-center gap-1.5">
-      <button
-        type="button"
-        onClick={() => onSelect(null)}
-        aria-pressed={selected === null}
-        className={cn(
-          'rounded-full border px-2.5 py-1 text-[11px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-          selected === null ? 'border-foreground/20 bg-foreground/5 text-foreground' : 'bg-card text-muted-foreground hover:bg-muted/60'
-        )}
-      >
-        {allLabel}
-      </button>
-      {items.map(({ value, count }) => (
-        <button
-          key={value}
-          type="button"
-          onClick={() => onSelect(selected === value ? null : value)}
-          aria-pressed={selected === value}
-          className={cn(
-            'rounded-full border px-2.5 py-1 text-[11px] font-semibold tabular-nums transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-            selected === value ? 'border-foreground/20 bg-foreground/5 text-foreground' : 'bg-card text-muted-foreground hover:bg-muted/60'
-          )}
-        >
-          {value} <span className="font-normal opacity-60">{count}</span>
-        </button>
-      ))}
-    </div>
+    <Select value={selected ?? ALL_VALUE} onValueChange={(value) => onSelect(value === ALL_VALUE ? null : value)}>
+      <SelectTrigger aria-label={ariaLabel}>
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value={ALL_VALUE}>{allLabel}</SelectItem>
+        {items.map(({ value, count }) => (
+          <SelectItem key={value} value={value}>
+            {value} <span className="font-normal opacity-60">{count}</span>
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   )
 }
 
