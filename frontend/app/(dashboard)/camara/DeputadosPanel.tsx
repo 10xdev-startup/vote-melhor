@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { ExternalLink, Search, X } from 'lucide-react'
+import { ArrowLeft, ExternalLink, Search, Users, Vote, X } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { VotePill } from '@/components/VotePill'
 import { countByParty, countByState, PartyFilter, StateFilter } from '@/components/PartyFilter'
@@ -56,6 +56,17 @@ function DeputyCard({ deputy, selected, onSelect }: { deputy: DeputySummary; sel
         {presidedCount > 0 && <p className="text-[11px] text-muted-foreground">Presidiu {presidedCount} {presidedCount === 1 ? 'votação' : 'votações'} sem votar (Artigo 17).</p>}
       </div>
     </button>
+  )
+}
+
+function DeputyGrid({ deputies, selected, setSelected, emptyMessage }: { deputies: DeputySummary[]; selected: number | null; setSelected: (id: number | null) => void; emptyMessage: string }) {
+  if (deputies.length === 0) return <p className="rounded-lg border border-dashed p-6 text-sm text-muted-foreground">{emptyMessage}</p>
+  return (
+    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+      {deputies.map((deputy) => (
+        <DeputyCard key={deputy.id} deputy={deputy} selected={selected === deputy.id} onSelect={() => setSelected(selected === deputy.id ? null : deputy.id)} />
+      ))}
+    </div>
   )
 }
 
@@ -155,6 +166,12 @@ function DetailPanel({ id, onClose }: { id: number; onClose: () => void }) {
 export function DeputadosPanel() {
   const [payload, setPayload] = useState<DeputiesPayload | null>(null)
   const [error, setError] = useState<string | null>(null)
+  // A tela abre em "Por partido" — cair direto numa lista alfabética de 513 nomes nao da
+  // nenhum panorama de quem esta na Camara. Navegar por partido da esse contexto primeiro.
+  const [subTab, setSubTab] = useState<'partidos' | 'todos'>('partidos')
+  const [drilldownParty, setDrilldownParty] = useState<string | null>(null)
+  const [drillQuery, setDrillQuery] = useState('')
+  const [drillState, setDrillState] = useState<string | null>(null)
   const [query, setQuery] = useState('')
   const [party, setParty] = useState<string | null>(null)
   const [state, setState] = useState<string | null>(null)
@@ -174,6 +191,9 @@ export function DeputadosPanel() {
       active = false
     }
   }, [])
+
+  const rawParties = useMemo(() => countByParty(payload?.deputies ?? []), [payload])
+  const maxPartyCount = rawParties[0]?.count ?? 1
 
   const parties = useMemo(() => {
     const deputies = payload?.deputies ?? []
@@ -200,43 +220,154 @@ export function DeputadosPanel() {
       .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
   }, [party, payload, query, state])
 
+  const deputiesInParty = useMemo(() => (payload?.deputies ?? []).filter((deputy) => deputy.party === drilldownParty), [payload, drilldownParty])
+  const statesInParty = useMemo(() => countByState(deputiesInParty), [deputiesInParty])
+  const visibleInParty = useMemo(() => {
+    const term = drillQuery.trim().toLowerCase()
+    return deputiesInParty
+      .filter((deputy) => (drillState ? deputy.state === drillState : true))
+      .filter((deputy) => !term || `${deputy.name} ${deputy.state ?? ''}`.toLowerCase().includes(term))
+      .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
+  }, [deputiesInParty, drillQuery, drillState])
+
+  const openParty = (partyName: string) => {
+    setDrilldownParty(partyName)
+    setDrillQuery('')
+    setDrillState(null)
+  }
+
   return (
     <div className="flex flex-col gap-4">
       {payload && (
-        <p className="text-xs text-muted-foreground">
-          {payload.deputies.length} deputados em exercício · {payload.coverage.votingCount} votações nominais do Plenário em {payload.coverage.year}
-          {payload.coverage.lastDate && <> · dados até {formatSessionDate(payload.coverage.lastDate)}</>}
-        </p>
-      )}
-
-      <div className="rounded-lg border bg-card p-4">
-        <div className="relative">
-          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar por nome, partido ou estado" className="pl-9" aria-label="Buscar deputado" />
-        </div>
-      </div>
-
-      {(states.length > 0 || parties.length > 0) && (
-        <div className="flex flex-col gap-3 rounded-lg border bg-card p-4">
-          {states.length > 0 && (
-            <div className="flex flex-col gap-1.5">
-              <p className="text-xs font-semibold text-muted-foreground">Estado</p>
-              <StateFilter states={states} selected={state} onSelect={setState} />
+        <div className="rounded-lg border bg-card p-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="flex items-center gap-3">
+              <span className="grid size-10 shrink-0 place-items-center rounded-full bg-sky-50 text-sky-600 dark:bg-sky-950/40 dark:text-sky-300">
+                <Users className="size-5" strokeWidth={1.8} aria-hidden />
+              </span>
+              <div>
+                <p className="text-2xl font-semibold tracking-[-0.01em] tabular-nums text-sky-700 dark:text-sky-300">{payload.deputies.length}</p>
+                <p className="text-xs text-muted-foreground">Deputados em exercício</p>
+              </div>
             </div>
-          )}
-          {parties.length > 0 && (
-            <div className="flex flex-col gap-1.5">
-              <p className="text-xs font-semibold text-muted-foreground">Partido</p>
-              <PartyFilter parties={parties} selected={party} onSelect={setParty} />
+            <div className="flex items-center gap-3">
+              <span className="grid size-10 shrink-0 place-items-center rounded-full bg-sky-50 text-sky-600 dark:bg-sky-950/40 dark:text-sky-300">
+                <Vote className="size-5" strokeWidth={1.8} aria-hidden />
+              </span>
+              <div>
+                <p className="text-2xl font-semibold tracking-[-0.01em] tabular-nums text-sky-700 dark:text-sky-300">{payload.coverage.votingCount}</p>
+                <p className="text-xs text-muted-foreground">Votações nominais em {payload.coverage.year}</p>
+              </div>
             </div>
-          )}
+          </div>
+          {payload.coverage.lastDate && <p className="mt-3 border-t pt-3 text-xs text-muted-foreground">Dados do Plenário até {formatSessionDate(payload.coverage.lastDate)}</p>}
         </div>
       )}
+
       {error && <div className="rounded-lg border border-dashed p-6 text-sm text-muted-foreground">{error}</div>}
       {!payload && !error && <div className="rounded-lg border border-dashed p-6 text-sm text-muted-foreground">Lendo os dados oficiais da Câmara…</div>}
-      {selected !== null && <DetailPanel id={selected} onClose={() => setSelected(null)} />}
-      {payload && <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{visible.map((deputy) => <DeputyCard key={deputy.id} deputy={deputy} selected={selected === deputy.id} onSelect={() => setSelected(selected === deputy.id ? null : deputy.id)} />)}</div>}
-      {payload && visible.length === 0 && <p className="rounded-lg border border-dashed p-6 text-sm text-muted-foreground">Nenhum deputado encontrado para esse filtro.</p>}
+
+      {payload && (
+        <>
+          <div role="tablist" aria-label="Como ver os deputados" className="flex w-fit rounded-lg border bg-muted/40 p-1">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={subTab === 'partidos'}
+              onClick={() => setSubTab('partidos')}
+              className={cn('rounded-md px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring', subTab === 'partidos' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground')}
+            >
+              Por partido
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={subTab === 'todos'}
+              onClick={() => setSubTab('todos')}
+              className={cn('rounded-md px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring', subTab === 'todos' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground')}
+            >
+              Todos os deputados
+            </button>
+          </div>
+
+          {selected !== null && <DetailPanel id={selected} onClose={() => setSelected(null)} />}
+
+          {subTab === 'partidos' && drilldownParty === null && (
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+              {rawParties.map(({ party: partyName, count }) => (
+                <button
+                  key={partyName}
+                  type="button"
+                  onClick={() => openParty(partyName)}
+                  className="rounded-lg border bg-card p-4 text-left transition-colors hover:border-sky-200 hover:bg-sky-50/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:hover:border-sky-900 dark:hover:bg-sky-950/20"
+                >
+                  <p className="text-lg font-semibold tracking-[-0.01em]">{partyName}</p>
+                  <p className="text-xs text-muted-foreground">{count} {count === 1 ? 'deputado' : 'deputados'}</p>
+                  <div className="mt-3 h-1 w-full overflow-hidden rounded-full bg-muted">
+                    <div className="h-full rounded-full bg-sky-400 dark:bg-sky-500" style={{ width: `${(100 * count) / maxPartyCount}%` }} />
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {subTab === 'partidos' && drilldownParty !== null && (
+            <div className="flex flex-col gap-3">
+              <button type="button" onClick={() => setDrilldownParty(null)} className="inline-flex w-fit items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground">
+                <ArrowLeft className="size-4" /> Partidos
+              </button>
+
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+                <div className="relative flex-1">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    value={drillQuery}
+                    onChange={(event) => setDrillQuery(event.target.value)}
+                    placeholder={`Buscar no ${drilldownParty} por nome ou estado`}
+                    className="pl-9"
+                    aria-label={`Buscar deputado do ${drilldownParty}`}
+                  />
+                </div>
+                {statesInParty.length > 0 && (
+                  <div className="flex flex-col gap-1.5 sm:w-40">
+                    <p className="text-xs font-semibold text-muted-foreground">Estado</p>
+                    <StateFilter states={statesInParty} selected={drillState} onSelect={setDrillState} />
+                  </div>
+                )}
+              </div>
+
+              <DeputyGrid deputies={visibleInParty} selected={selected} setSelected={setSelected} emptyMessage={`Nenhum deputado do ${drilldownParty} encontrado para esse filtro.`} />
+            </div>
+          )}
+
+          {subTab === 'todos' && (
+            <div className="flex flex-col gap-3">
+              {(states.length > 0 || parties.length > 0) && (
+                <div className="grid grid-cols-2 gap-3">
+                  {states.length > 0 && (
+                    <div className="flex flex-col gap-1.5">
+                      <p className="text-xs font-semibold text-muted-foreground">Estado</p>
+                      <StateFilter states={states} selected={state} onSelect={setState} />
+                    </div>
+                  )}
+                  {parties.length > 0 && (
+                    <div className="flex flex-col gap-1.5">
+                      <p className="text-xs font-semibold text-muted-foreground">Partido</p>
+                      <PartyFilter parties={parties} selected={party} onSelect={setParty} />
+                    </div>
+                  )}
+                </div>
+              )}
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar por nome, partido ou estado" className="pl-9" aria-label="Buscar deputado" />
+              </div>
+
+              <DeputyGrid deputies={visible} selected={selected} setSelected={setSelected} emptyMessage="Nenhum deputado encontrado para esse filtro." />
+            </div>
+          )}
+        </>
+      )}
     </div>
   )
 }

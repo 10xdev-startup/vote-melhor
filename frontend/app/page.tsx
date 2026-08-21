@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { Instrument_Serif } from 'next/font/google'
-import { ArrowDown, ArrowRight, Building2, Database, FileText, Landmark, Link2, Scale, Search, Sparkles, Vote } from 'lucide-react'
+import { ArrowDown, ArrowRight, Building2, Database, FileText, Github, Landmark, Link2, Scale, Search, Sparkles, Vote } from 'lucide-react'
 
 const instrumentSerif = Instrument_Serif({ weight: '400', style: ['normal', 'italic'], subsets: ['latin'], display: 'swap', variable: '--font-instrument-serif' })
 
@@ -246,6 +246,16 @@ export default function HomePage(): React.JSX.Element {
             a Vote Melhor quer simplificar o acesso aos dados públicos brasileiros. Todo dado exposto na
             interface fica acessível também via API.
           </p>
+
+          <a
+            href="https://github.com/10xdev-startup/vote-melhor"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-8 inline-flex items-center gap-2.5 rounded-full bg-[#d9ff70] px-5 py-3 text-sm font-semibold text-[#111725] transition hover:bg-[#e6ff9c]"
+          >
+            <Github className="size-[18px]" strokeWidth={1.8} aria-hidden />
+            Acesse o projeto no GitHub
+          </a>
         </div>
       </section>
     </div>

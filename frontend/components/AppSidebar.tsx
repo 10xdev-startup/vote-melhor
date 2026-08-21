@@ -20,12 +20,12 @@ type SidebarMode = 'expanded' | 'collapsed' | 'hover'
 // A landing ('/') vive fora do grupo (dashboard) e nao entra aqui: a sidebar
 // e a navegacao da area logada.
 const NAV_ITEMS = [
+  { href: '/inicio', title: 'Início', icon: '🏠' },
   { href: '/camara', title: 'Câmara', icon: '🏛️' },
   { href: '/senado', title: 'Senado', icon: '🗳️' },
   { href: '/fonte-de-dados', title: 'Fonte de dados', icon: '🗂️' },
-  // Fora da navegacao, nao deletados: `/inicio` (vitrine do template) e `/componentes`
-  // continuam existindo e acessiveis pela URL — so nao aparecem na sidebar do produto.
-  // { href: '/inicio', title: 'Início', icon: '🏠' },
+  // Fora da navegacao, nao deletado: `/componentes` continua existindo e acessivel
+  // pela URL — so nao aparece na sidebar do produto.
   // { href: '/componentes', title: 'Componentes', icon: '🧩' },
 ]
 

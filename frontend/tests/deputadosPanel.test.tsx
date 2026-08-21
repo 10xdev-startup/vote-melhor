@@ -231,18 +231,43 @@ beforeEach(() => {
 })
 
 describe('CamaraView', () => {
-  it('mostra o recorte e os deputados em exercício sem taxa de participação', async () => {
+  it('mostra o recorte de deputados em exercício sem taxa de participação', async () => {
     render(<CamaraView />)
 
+    const deputadosStat = await screen.findByText('Deputados em exercício')
+    expect(deputadosStat.closest('div')).toHaveTextContent('2')
+    expect(screen.getByText(/Votações nominais em 2026/).closest('div')).toHaveTextContent('120')
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Todos os deputados' }))
+
     expect(await screen.findByText('Nikolas Ferreira')).toBeInTheDocument()
-    expect(screen.getByText(/2 deputados em exercício · 120 votações nominais/)).toBeInTheDocument()
     expect(screen.getByLabelText('99 votos publicados').parentElement).toHaveTextContent('99 votos publicados · 70 sim · 27 não · 2 outros')
     expect(screen.queryByText(/taxa de participação:/i)).not.toBeInTheDocument()
     expect(screen.queryByText(/\d+ ausentes/i)).not.toBeInTheDocument()
   })
 
+  it('abre em "Por partido" com cards e entra num partido pra ver os deputados dele', async () => {
+    render(<CamaraView />)
+
+    const plCard = await screen.findByRole('button', { name: /^PL/ })
+    expect(plCard).toHaveTextContent('1 deputado')
+    expect(screen.getByRole('button', { name: /^PT/ })).toHaveTextContent('1 deputado')
+    expect(screen.queryByText('Nikolas Ferreira')).not.toBeInTheDocument()
+
+    fireEvent.click(plCard)
+
+    expect(await screen.findByText('Nikolas Ferreira')).toBeInTheDocument()
+    expect(screen.queryByText('Ana Deputada')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Partidos' }))
+
+    expect(await screen.findByRole('button', { name: /^PL/ })).toBeInTheDocument()
+    expect(screen.queryByText('Nikolas Ferreira')).not.toBeInTheDocument()
+  })
+
   it('busca por nome, partido ou estado', async () => {
     render(<CamaraView />)
+    fireEvent.click(await screen.findByRole('tab', { name: 'Todos os deputados' }))
     await screen.findByText('Nikolas Ferreira')
 
     fireEvent.change(screen.getByLabelText('Buscar deputado'), { target: { value: 'SP' } })
@@ -253,9 +278,11 @@ describe('CamaraView', () => {
 
   it('filtra por partido sem ordenar por critério editorial', async () => {
     render(<CamaraView />)
+    fireEvent.click(await screen.findByRole('tab', { name: 'Todos os deputados' }))
     await screen.findByText('Nikolas Ferreira')
 
-    fireEvent.click(screen.getByRole('button', { name: 'PT 1' }))
+    fireEvent.click(screen.getByRole('combobox', { name: 'Filtrar por partido' }))
+    fireEvent.click(await screen.findByRole('option', { name: 'PT 1' }))
 
     expect(screen.getByText('Ana Deputada')).toBeInTheDocument()
     expect(screen.queryByText('Nikolas Ferreira')).not.toBeInTheDocument()
@@ -263,24 +290,30 @@ describe('CamaraView', () => {
 
   it('cruza estado e partido nas contagens sem ocultar opções zeradas', async () => {
     render(<CamaraView />)
+    fireEvent.click(await screen.findByRole('tab', { name: 'Todos os deputados' }))
     await screen.findByText('Nikolas Ferreira')
 
-    expect(screen.getByRole('group', { name: 'Filtrar deputados por estado' })).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'MG 1' }))
+    const stateSelect = screen.getByRole('combobox', { name: 'Filtrar deputados por estado' })
+    fireEvent.click(stateSelect)
+    fireEvent.click(await screen.findByRole('option', { name: 'MG 1' }))
 
     expect(screen.getByText('Nikolas Ferreira')).toBeInTheDocument()
     expect(screen.queryByText('Ana Deputada')).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'PL 1' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'PT 0' })).toBeInTheDocument()
 
-    fireEvent.click(screen.getByRole('button', { name: 'PT 0' }))
-    expect(screen.getByRole('button', { name: 'MG 0' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'SP 1' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('combobox', { name: 'Filtrar por partido' }))
+    expect(await screen.findByRole('option', { name: 'PL 1' })).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: 'PT 0' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('option', { name: 'PT 0' }))
+
+    fireEvent.click(screen.getByRole('combobox', { name: 'Filtrar deputados por estado' }))
+    expect(await screen.findByRole('option', { name: 'MG 0' })).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: 'SP 1' })).toBeInTheDocument()
     expect(screen.getByText('Nenhum deputado encontrado para esse filtro.')).toBeInTheDocument()
   })
 
   it('abre o voto a voto e preserva todas as proposições afetadas', async () => {
     render(<CamaraView />)
+    fireEvent.click(await screen.findByRole('tab', { name: 'Todos os deputados' }))
     const name = await screen.findByText('Nikolas Ferreira')
     fireEvent.click(name.closest('button')!)
 
