@@ -5,6 +5,13 @@ import { isPublicPath } from "@/lib/publicRoutes"
 // volta a exigir login, e rota privada que vaza por um path exato virar prefixo.
 
 describe("isPublicPath", () => {
+  it("abre dossiês publicados e preserva administração privada", () => {
+    expect(isPublicPath("/dossies")).toBe(true)
+    expect(isPublicPath("/dossies/senado")).toBe(true)
+    expect(isPublicPath("/dossies-interno")).toBe(false)
+    expect(isPublicPath("/admin/dossies")).toBe(false)
+    expect(isPublicPath("/admin/dossies/senado")).toBe(false)
+  })
   it("abre a leitura de dado oficial", () => {
     expect(isPublicPath("/inicio")).toBe(true)
     expect(isPublicPath("/camara")).toBe(true)

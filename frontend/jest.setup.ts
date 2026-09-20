@@ -35,7 +35,7 @@ class ResizeObserverStub {
 globalAny.ResizeObserver = ResizeObserverStub
 
 // matchMedia é usado por muita UI; o jsdom não implementa.
-if (!window.matchMedia) {
+if (typeof window !== "undefined" && !window.matchMedia) {
   window.matchMedia = ((query: string) => ({
     matches: false,
     media: query,
@@ -57,20 +57,20 @@ if (!window.matchMedia) {
 }
 
 // Pointer capture / scroll que popovers, menus e selects do Radix chamam.
-if (!Element.prototype.scrollIntoView) {
+if (typeof Element !== "undefined" && !Element.prototype.scrollIntoView) {
   Element.prototype.scrollIntoView = function scrollIntoView() {
     /* noop */
   }
 }
-if (!Element.prototype.hasPointerCapture) {
+if (typeof Element !== "undefined" && !Element.prototype.hasPointerCapture) {
   Element.prototype.hasPointerCapture = () => false
 }
-if (!Element.prototype.setPointerCapture) {
+if (typeof Element !== "undefined" && !Element.prototype.setPointerCapture) {
   Element.prototype.setPointerCapture = () => {
     /* noop */
   }
 }
-if (!Element.prototype.releasePointerCapture) {
+if (typeof Element !== "undefined" && !Element.prototype.releasePointerCapture) {
   Element.prototype.releasePointerCapture = () => {
     /* noop */
   }
