@@ -1,4 +1,5 @@
 import { createServerClient } from '@supabase/ssr'
+import WebSocket from 'ws'
 import { cookies } from 'next/headers'
 
 export async function createClient(): Promise<ReturnType<typeof createServerClient>> {
@@ -11,6 +12,7 @@ export async function createClient(): Promise<ReturnType<typeof createServerClie
   }
 
   return createServerClient(url, key, {
+    realtime: { transport: WebSocket as unknown as typeof globalThis.WebSocket },
     cookies: {
       getAll: () => cookieStore.getAll(),
       setAll(cookiesToSet) {

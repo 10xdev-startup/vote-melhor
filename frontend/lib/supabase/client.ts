@@ -22,4 +22,12 @@ export function createClient(): SupabaseClient {
   return browserClient
 }
 
-export const supabase = createClient()
+// O módulo também é avaliado no SSR. Só instanciar quando o navegador usar o cliente;
+// os consumidores atuais acessam auth/rede em efeitos ou eventos, após a hidratação.
+export const supabase = new Proxy({} as SupabaseClient, {
+  get(_target, prop) {
+    const client = createClient()
+    const value = Reflect.get(client, prop, client)
+    return typeof value === 'function' ? value.bind(client) : value
+  },
+})
