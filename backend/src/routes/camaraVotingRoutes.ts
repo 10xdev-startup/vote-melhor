@@ -1,12 +1,9 @@
 import { Router } from 'express'
 import { CamaraVotingController } from '@/controllers/CamaraVotingController'
-import { supabaseMiddleware } from '@/middleware'
 
 const router = Router()
 
-// Mantém a decisão atual das demais rotas de dados públicos até a abertura conjunta da API.
-router.use(supabaseMiddleware)
-
+// Rota publica: dado oficial, sem req.user. O gate de conta vive em /users.
 router.get('/', CamaraVotingController.list)
 router.get('/:id', CamaraVotingController.detail)
 
