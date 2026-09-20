@@ -202,7 +202,9 @@ type ApiResponse<T> =
 
 Para tarefas nao triviais, escreva o plano **antes** de codar. Template em `.cursor/plans/templates/planos.plan.md`:
 
-- **Problema → Solucao → Checklist** (`Fase 0/1/...`) → **Passo a passo** (cada fase: Objetivo, acoes `Em <arquivo> → <acao>`, Validacao parcial, Commit sugerido) → **Fase final** (smoke test) → **Diagrama atual vs. desejado** com convencoes de notacao (`(existente)`, `✨ NOVO`, `✂ DELETADO`, `◄──`, caixas `┌─┐` p/ contratos).
+- **Problema → Solucao → Diagrama** (atual vs. desejado) → **Mapa de arquivos** → **Checklist resumida** (`Fase 0/1/...`) → **Passo a passo** → **Fase final** (smoke test).
+- Cada fase do passo a passo: Objetivo, **Contrato travado** (decisoes que sobrevivem a fase), **Reaproveita** (`arquivo:linha` + como), **DDL desta fase** (so se mexer no banco), acoes `Em <arquivo> → <acao>`, **Cenarios obrigatorios** (tabela `cenario → resultado`, escrita ANTES do codigo — cada linha vira um `it(...)`), Validacao parcial, Commit sugerido.
+- Convencoes de notacao do diagrama (`(existente)`, `✨ NOVO`, `✂ DELETADO`, `◄──`, caixas `┌─┐` p/ contratos) em `.cursor/plans/templates/diagrama-arquitetura.template.plan.md`.
 
 Convencoes:
 - Frontmatter Cursor: `name`, `overview`, `todos: []`, `isProject: false`.

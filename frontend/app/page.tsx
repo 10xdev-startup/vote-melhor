@@ -36,19 +36,33 @@ const PRINCIPIOS = [
   'IA como ferramenta de compreensão, não de opinião',
 ]
 
+/**
+ * Chamada de acesso. Repetida ao fim de cada secao: a entrada do produto nao pode depender
+ * de o visitante achar um link no topo. Aponta pra `/inicio`, que e publico — o texto diz
+ * isso na cara, porque "acessar" costuma ser lido como "vai pedir cadastro".
+ */
+function AccessCta({ tone = 'light' }: { tone?: 'light' | 'dark' }): React.JSX.Element {
+  const isDark = tone === 'dark'
+  return (
+    <div className="mt-10 flex flex-wrap items-center gap-x-4 gap-y-2">
+      <Link
+        href="/inicio"
+        className={`group inline-flex items-center gap-2 rounded-full px-5 py-3 text-sm font-semibold transition ${isDark ? 'bg-white text-[#111725] hover:bg-white/88' : 'bg-[#315bff] text-white hover:bg-[#2749d8]'}`}
+      >
+        Acessar os dados
+        <ArrowRight className="size-[18px] transition group-hover:translate-x-0.5" strokeWidth={1.8} aria-hidden />
+      </Link>
+      <span className={`text-[13px] ${isDark ? 'text-white/55' : 'text-[#111725]/55'}`}>
+        Sem cadastro — os dados são públicos.
+      </span>
+    </div>
+  )
+}
+
 export default function HomePage(): React.JSX.Element {
   return (
     <div className={`${instrumentSerif.variable} min-h-screen overflow-hidden bg-[#f2efe7] text-[#111725] selection:bg-[#315bff] selection:text-white`}>
-      <header className="mx-auto flex max-w-[1180px] items-center justify-end px-6 pt-6 md:px-10">
-        <Link
-          href="/login"
-          className="rounded-full border border-[#111725]/12 bg-white/45 px-4 py-2 text-sm font-semibold text-[#111725]/75 transition hover:border-[#111725]/25 hover:text-[#111725]"
-        >
-          Entrar
-        </Link>
-      </header>
-
-      <section className="relative mx-auto max-w-[1180px] px-6 pb-14 pt-10 md:px-10 md:pb-20 md:pt-14">
+      <section className="relative mx-auto max-w-[1180px] px-6 pb-14 pt-12 md:px-10 md:pb-20 md:pt-16">
         <div className="pointer-events-none absolute -right-24 top-0 size-[430px] rounded-full bg-[#315bff]/10 blur-[100px]" aria-hidden />
 
         <div className="relative grid items-center gap-12 lg:grid-cols-[1.05fr_0.95fr]">
@@ -81,6 +95,8 @@ export default function HomePage(): React.JSX.Element {
                 <span className="text-[13px] font-semibold">Senado Federal</span>
               </div>
             </div>
+
+            <AccessCta />
           </div>
 
           <div className="lp-rise lp-delay-1 relative">
@@ -164,6 +180,8 @@ export default function HomePage(): React.JSX.Element {
               </li>
             ))}
           </ul>
+
+          <AccessCta />
         </div>
       </section>
 
@@ -186,6 +204,8 @@ export default function HomePage(): React.JSX.Element {
               </div>
             ))}
           </div>
+
+          <AccessCta />
         </div>
       </section>
 
@@ -207,6 +227,8 @@ export default function HomePage(): React.JSX.Element {
               </div>
             ))}
           </div>
+
+          <AccessCta />
         </div>
       </section>
 
@@ -233,6 +255,8 @@ export default function HomePage(): React.JSX.Element {
               ))}
             </ul>
           </div>
+
+          <AccessCta />
         </div>
       </section>
 
@@ -246,6 +270,8 @@ export default function HomePage(): React.JSX.Element {
             a Vote Melhor quer simplificar o acesso aos dados públicos brasileiros. Todo dado exposto na
             interface fica acessível também via API.
           </p>
+
+          <AccessCta tone="dark" />
 
           <a
             href="https://github.com/10xdev-startup/vote-melhor"

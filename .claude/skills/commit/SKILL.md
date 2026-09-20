@@ -6,76 +6,89 @@ description: "Fluxo padrao para organizar commits e push com quality gate integr
 # Git Commit & Push Workflow
 
 **Nunca commite automaticamente.** So commite quando o usuario pedir explicitamente (ex: "commita", "pode subir", "sobe", "commit", "push").
-
-## Modos de execucao
-
-### 1) Commit rapido (default quando usuario pedir so "commit")
-
-Use quando o usuario pedir apenas **commit** (ex: "commita", "pode subir", "so commit", "so commita"):
-
-- Rode `git status` + `git diff --stat` + `git diff` por grupo de arquivos
-- Rode **sempre** `npm run lint`
-- Monte e apresente a **tabela de commits por arquivos**
-- Nao rode `npm run build` automaticamente
-- Aguarde "ok" do usuario para executar o(s) commit(s)
-
-### 2) Commit completo (somente quando usuario pedir "completo")
-
-Use quando o usuario pedir explicitamente **completo** (ex: "commit completo", "faz o completo", "quality gate completo"):
-
-- Faca tudo do modo rapido
-- Rode tambem `npm run build`
-- Apresente tabela enriquecida com status
-- Aguarde "ok" do usuario para executar o(s) commit(s)
+Quando o usuario pedir, siga este fluxo. Se pedir para pular o quality gate ("pula", "skip", "so commita"), va direto para a etapa 3.
 
 ## 1. Analisar alteracoes pendentes
 
 - Rode `git status` e `git diff --stat` para listar todos os arquivos modificados
 - Rode `git diff` por grupo de arquivos para entender cada mudanca
 
-## 2. Quality Gate por modo
+## 2. Quality Gate (rodado PELO DEV)
 
-### Lint (sempre)
-
-```bash
-npm run lint
-```
-
-- **Sempre roda**, independente do tamanho da mudanca
-- Se falhar, corrija os erros e rode novamente. Nao prossiga ate passar.
-
-### Build (somente no completo)
+**O agente nao roda `typecheck`, `lint` nem `build` neste repo** — o WSL do dev trava (ver
+"Comandos" no `CLAUDE.md`). Liste os comandos junto da tabela e aguarde o retorno colado.
 
 ```bash
-npm run build
+npm run typecheck -w backend && npm run lint -w backend
+npm run typecheck -w frontend && npm run lint -w frontend
 ```
 
-Rode no modo **completo**.
-Se falhar, corrija e rode novamente. Nao prossiga ate passar.
+- **Sempre pedido**, independente do tamanho da mudanca. Se falhar, corrija e peca de novo.
+  Nao prossiga ate passar.
+- `npm run build` so quando o dev pedir, ou quando a mudanca tocar `types/`, `tsconfig`,
+  `package.json` ou config de build.
 
-**Frontend com limitacao de memoria (WSL):**
-```bash
-cd frontend && NODE_OPTIONS="--max-old-space-size=4096" npm run build
-```
-Use quando o build crashar por falta de memoria no WSL (erro de heap ou crash do terminal).
+O agente roda apenas testes Jest **filtrados por arquivo**, que sao leves:
+`npm test -w backend -- <arquivo>` / `npm test -w frontend -- <arquivo>`, ou `-- -o` para
+os afetados pelo diff. **Nunca** a suite inteira sem filtro.
 
-## 3. Agrupar por responsabilidade
+## 3. Organizar pela ordem do Mapa de arquivos
 
-Separe as alteracoes em commits logicos, cada um com **uma unica responsabilidade**:
-- Agrupe arquivos que fazem parte da mesma feature/fix/refactor
-- Nunca misture alteracoes de backend com frontend se forem de funcionalidades diferentes
-- Nunca misture performance com feature nova
+Esta skill e a fonte do padrao de organizacao, titulos e tabelas de commits. O objetivo e localizar as mudancas por feature e area no historico do Git.
+
+- Use arquivos inteiros, sem hunks ou `git add -p`. Cada caminho entra em um unico commit do lote; inclua arquivos novos e remocoes, e confira que nenhum caminho autorizado ficou de fora.
+- Siga os grupos e a ordem do Mapa de arquivos: backend rotas e controllers; backend services; backend models e types; backend testes; frontend componentes; frontend hooks; frontend services, lib e types; frontend testes; documentacao e padrao dos planos. Omita grupos sem diff e adapte os caminhos ao projeto.
+- Os commits da mesma entrega formam um lote para o mesmo push. Nao reorganize automaticamente por funcionalidade nem divida trechos para tornar cada commit independente. Declare dependencias entre grupos e valide o conjunto final.
+- Quando um arquivo inteiro incluir mais de um efeito (ex.: campanhas e arquivamento), descreva ambos no corpo do commit. Mudancas de outra entrega so entram se fizerem parte do escopo autorizado.
+- DDL aplicado via Management API fica registrado na documentacao; nao crie migration `.sql` nem commit vazio para representar o bloco Supabase do mapa.
+
+### Titulos do lote de uma feature
+
+Formato obrigatorio: `feat(<nome-da-feature>): <area do mapa> - <mudanca concreta>`.
+
+- Todos os commits do lote usam o mesmo prefixo `feat(<nome-da-feature>):`, inclusive testes, hooks e documentacao. Nao trocar por `test`, `refactor` ou `docs` nesses grupos.
+- O texto entre parenteses identifica a feature, nao a camada. Defina-o uma vez e preserve em todo o lote; `acesso-publico` e o exemplo desta entrega, nao um nome fixo para futuras features.
+- A area faz parte do titulo real do commit, nao apenas do rotulo junto da numeracao na tabela. Ex.: `backend rotas e controllers`, `frontend hooks` e `documentacao e padrao dos planos`.
+- Depois de ` - `, diga o efeito de forma concreta. Nao acrescente "refactor" ao titulo dos hooks apenas porque houve extracao de codigo.
+
+Exemplos aprovados:
+- `feat(acesso-publico): backend rotas e controllers - abre a leitura dos dados factuais`
+- `feat(acesso-publico): frontend services, lib e types - move a decisao de rota publica`
+- `feat(acesso-publico): frontend testes - cobre rota publica e vazamento por prefixo`
 
 ## 4. Apresentar commits para aprovacao
 
-Apresente titulo + corpo de cada commit antes de executar:
+Uma tabela por commit, separadas por `---`. Tres linhas cada: titulo, descricao,
+arquivos. O formato existe pra o usuario escanear a coluna da esquerda e decidir
+sem abrir diff — nao junte tudo numa tabela unica, a separacao e o que torna
+legivel com 8 commits na tela.
+
+```markdown
+| **#1** | `feat(acesso-publico): backend rotas e controllers - abre a leitura dos dados factuais` |
+|:---|:---|
+| **Descricao** | O que muda e POR QUE, em 1-3 frases. Nomeie o efeito real, nao o arquivo. |
+| **Arquivos** | `arquivo1` · `arquivo2` · testes `x` · `y` |
 
 ---
-**#N** — `tipo: titulo`
-**Arquivos:** `arquivo1.ts`, `arquivo2.ts`
-> Corpo descritivo em 2-3 linhas explicando o que foi feito e o motivo.
 
----
+| **#2** | `feat(acesso-publico): frontend testes - cobre rota publica e vazamento por prefixo` |
+|:---|:---|
+| **Descricao** | ... |
+| **Arquivos** | ... |
+```
+
+Regras da tabela:
+- Separe cada commit com `---`; sem isso as tabelas colam e viram uma parede.
+- **Arquivos**: separador `·`, sem caminho completo repetido. Agrupe por pasta
+  quando forem muitos (`backend/src/models/` → `a`, `b`, `c`). Informe a quantidade
+  de caminhos e confira a lista contra o diff; arquivos sem alteracao nao entram.
+- **Descricao**: sera o corpo do commit; preserve o texto aprovado. Diga o efeito, nao o inventario. "Corrige X, que fazia Y" vale
+  mais que "altera A, B e C".
+- Se um commit carregar duas responsabilidades por limite de arquivo inteiro,
+  **diga isso na descricao** em vez de esconder.
+
+Depois da tabela, liste fora dela o que exigir decisao: ordem obrigatoria entre
+commits, bug conhecido subindo junto, quality gate que nao pode rodar.
 
 Aguarde o "ok" do usuario antes de executar os commits.
 
@@ -85,7 +98,7 @@ Cada commit usa HEREDOC com titulo + corpo descritivo:
 
 ```bash
 git add arquivo1 arquivo2 && git commit -m "$(cat <<'EOF'
-tipo: titulo curto em portugues
+feat(acesso-publico): frontend testes - cobre rota publica e vazamento por prefixo
 
 Descricao detalhada em 2-3 linhas explicando
 o que foi feito e o motivo da alteracao.
@@ -103,9 +116,8 @@ EOF
 
 - Titulos de commit em **portugues**, lowercase, sem ponto final
 - Corpo do commit em **portugues** com contexto util
-- Titulo deve ser o **mais descritivo possivel** dentro do limite de ~72 caracteres
-  - Bom: `feat: adicionar filtro por data no relatorio de vendas`
-  - Ruim: `feat: adicionar filtro`
+- Titulos devem ser descritivos e concisos. ~72 caracteres e referencia, nao limite que justifique remover a area ou alterar o prefixo aprovado.
+- Na execucao, use o titulo completo e a descricao aprovados nas tabelas; a numeracao `#1`, `#2` pertence so a apresentacao.
 - Sempre perguntar antes de fazer `push --force`
 
-**Tipos de commit:** `feat`, `fix`, `perf`, `style`, `refactor`, `docs`, `chore`, `test`
+**Fora de um lote de feature:** mudancas independentes podem usar `fix`, `perf`, `style`, `refactor`, `docs`, `chore` ou `test`, conforme o trabalho. Dentro do lote, prevalece o prefixo unico definido na etapa 3.

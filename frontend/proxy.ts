@@ -1,22 +1,17 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { normalizeRedirectTarget } from '@/lib/authRedirect'
+import { isPublicPath } from '@/lib/publicRoutes'
 
 /**
  * Atualiza os cookies da sessao e aplica o gate de rotas do produto.
  *
- * Aberto a visitante: a landing, as LPs e as duas telas de entrada. Todo o resto
- * (o grupo `(dashboard)` e a tela de boas-vindas) exige sessao valida.
+ * Quais rotas sao publicas mora em `@/lib/publicRoutes` — aqui fica so o gate. Em resumo:
+ * leitura de dado oficial e aberta, e o que depende de usuario exige sessao valida.
  */
-const PUBLIC_PATHS = ['/', '/login', '/cadastro']
-const PUBLIC_PREFIXES = ['/lp/']
 
 // Rotas de entrada: quem ja tem sessao e resolvido no destino, nao ve o formulario.
 const ENTRY_PATHS = ['/login', '/cadastro']
-
-function isPublicPath(pathname: string): boolean {
-  return PUBLIC_PATHS.includes(pathname) || PUBLIC_PREFIXES.some((prefix) => pathname.startsWith(prefix))
-}
 
 // O redirect precisa carregar os cookies que o refresh acabou de escrever, senao a
 // sessao renovada se perde e a proxima request recomeca o ciclo.
