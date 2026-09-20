@@ -11,7 +11,7 @@ import {
   DropdownMenu, DropdownMenuContent,
   DropdownMenuItem, DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu'
-import { Check, LogOut, Maximize2, Minimize2, MousePointerClick, PanelLeft } from 'lucide-react'
+import { Check, LogIn, LogOut, Maximize2, Minimize2, MousePointerClick, PanelLeft } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { signOut } from '@/services/authService'
 
@@ -121,7 +121,7 @@ function AppSidebar() {
     []
   )
 
-  const { user } = useAuth()
+  const { user, isLoading } = useAuth()
 
   // Full reload pra landing: o gate do proxy.ts precisa reavaliar a rota sem os
   // cookies de sessao, e o Router Cache do Next nao pode servir a area logada.
@@ -172,16 +172,33 @@ function AppSidebar() {
 
       <SidebarFooter>
         <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              onClick={() => void handleLogout()}
-              tooltip={user?.email ? `Sair (${user.email})` : 'Sair'}
-              className="text-muted-foreground hover:text-foreground"
-            >
-              <LogOut className="size-4" />
-              <span>Sair</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
+          {/* As telas de leitura sao publicas, entao o rodape precisa servir os dois
+              estados. Enquanto a sessao inicial nao foi lida o item nao aparece: render
+              igual no server e no primeiro paint do client, sem piscar 'Entrar' pra quem
+              ja esta logado. */}
+          {!isLoading && (
+            <SidebarMenuItem>
+              {user ? (
+                <SidebarMenuButton
+                  onClick={() => void handleLogout()}
+                  tooltip={user.email ? `Sair (${user.email})` : 'Sair'}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  <LogOut className="size-4" />
+                  <span>Sair</span>
+                </SidebarMenuButton>
+              ) : (
+                <SidebarMenuButton
+                  onClick={() => router.push('/login')}
+                  tooltip="Entrar"
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  <LogIn className="size-4" />
+                  <span>Entrar</span>
+                </SidebarMenuButton>
+              )}
+            </SidebarMenuItem>
+          )}
 
           <SidebarMenuItem>
             {!hydrated ? (
