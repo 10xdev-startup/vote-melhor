@@ -21,87 +21,11 @@ isProject: false
 
 ---
 
-## Checklist resumida
-
-```
-Fase 0: <acao em 1 linha>
-Fase 1: <acao em 1 linha>
-Fase 2: <acao em 1 linha>
-Fase 3: <acao em 1 linha>
-Fase 4: <acao em 1 linha> — opcional
-Fase 6: <acao em 1 linha> — separado
-```
-
----
-
-## Passo a passo
-
-### Fase 1 — `<titulo curto>`
-
-**Objetivo:** `<resultado da fase em 1 linha>`.
-
-1. Em `<arquivo>`
-2. `<acao concreta>`.
-
-**Validacao parcial:** `<como confirmar>`.
-
-**Commit sugerido:** `<tipo>(<escopo>): <titulo descritivo>`
-
----
-
-### Fase N — `<titulo curto>`
-
-**Objetivo:** `<resultado da fase em 1 linha>`.
-
-1. `<acao concreta>`.
-
-**Validacao parcial:** `<como confirmar>`.
-
-**Commit sugerido:** `<tipo>(<escopo>): <titulo descritivo>`
-
----
-
-### Fase final — Validacao (smoke test)
-
-- `npm run typecheck -w backend` → 0 erros.
-- `npm run lint -w backend` → 0 erros.
-- `npm run typecheck -w frontend` → 0 erros.
-- `npm run lint -w frontend` → 0 erros.
-- Testes Jest PERTINENTES (NUNCA a suite inteira — o WSL trava): `npm test -w backend -- <arquivo>` / `npm test -w frontend -- <arquivo>`, ou `-- -o` / `-- --findRelatedTests <arquivo>`.
-- Reinicia backend (`npm run dev -w backend`).
-- Abre `<rota>` no frontend; `<comportamento esperado>`.
-- Faz `<acao chave>`; ve no log:
-  - `[<servico>] <linha esperada>`
-- `<cenario E2E critico>`.
-- `<cenario edge case que costuma quebrar>`.
-
----
-
 ## Diagrama: estado atual vs. desejado
 
 > Se for **feature nova** (sem estado atual), mantenha apenas a secao "Desejado".
 >
-> ## Dicas de uso
->
-> 1. **Mantenha o ASCII consistente.** Use sempre os mesmos caracteres (`│`, `├`, `└`, `▼`, `◄──`) — facilita ler em monospace.
-> 2. **Anote o status de cada caixa.** Sem `(existente)` / `✨ NOVO` o leitor não sabe o que é trabalho novo vs. estado atual.
-> 3. **Comentários inline > legendas separadas.** Coloque `◄── papel` ou `# motivo` na mesma linha do componente; evita o ping-pong de "ver legenda abaixo".
-> 4. **Caixas só pra contratos importantes.** Use `┌─┐` para destacar contratos de endpoint ou regras críticas — não abuse, perde força.
-> 5. **Mostre fluxos paralelos.** Se um componente alimenta vários outros, use `├──►` repetidamente em vez de transformar tudo em texto.
-> 6. **Conte linhas/arquivos só quando relevante.** "(~250 linhas)" ajuda a calibrar tamanho do trabalho; "(1442 linhas)" ajuda a justificar uma quebra. Não ponha em todo lugar.
->
-> ## Convenções de notação
->
-> Use estas marcações nos diagramas para deixar o estado de cada componente óbvio:
->
-> - `(existente)` — arquivo/módulo que já existe e permanece
-> - `(existente — ganha X)` — arquivo já existe e ganha responsabilidade nova
-> - `(existente — perde X)` — arquivo já existe e tem responsabilidade removida
-> - `✨ NOVO` — arquivo/módulo a ser criado
-> - `✂ DELETADO` — arquivo/módulo a ser removido
-> - `◄──` — anotação inline apontando algo importante na linha anterior
-> - `├─` / `└─` — listagem de responsabilidades/métodos do componente acima
-> - Caixa com `┌─┐ │ └─┘` — destaque para contratos de API ou fluxos importantes
+> **Regra obrigatoria para banco:** sempre que o plano criar ou alterar estrutura no banco, o diagrama deve mostrar um no explicito `Banco / DDL` com tabela afetada, colunas e tipos/nullability/defaults, constraints, indices, RLS/policies/grants, publication/Realtime quando aplicavel e o metodo de aplicacao. Marque o que sera criado, alterado, removido ou apenas preservado; nao esconda DDL em texto generico como "ajustar schema".
 
 ### Atual
 
@@ -166,11 +90,16 @@ backend/src/types/tag.ts                        (existente — ganha tipos)
          ├─ TagFavoriteResponse                  ◄── retorno do POST/DELETE
          └─ Tag (existente — ganha campo isFavorite?: boolean)
 
-supabase/migrations/<timestamp>_tag_favorites.sql  ✨ NOVO
-         └─ CREATE TABLE tag_favorites (
-              user_id, tag_id, created_at,
-              UNIQUE (user_id, tag_id)
-            )
+Supabase PostgreSQL — DDL via Management API       ✨ ALTERACAO ESTRUTURAL
+         └─ CREATE TABLE public.tag_favorites
+              ├─ user_id uuid NOT NULL
+              ├─ tag_id uuid NOT NULL
+              ├─ created_at timestamptz NOT NULL DEFAULT now()
+              ├─ UNIQUE (user_id, tag_id)
+              ├─ RLS ENABLED + policies: <listar operacoes e predicados>
+              ├─ grants: <listar o que muda ou declarar preservados>
+              └─ Realtime/publication: <entra, nao entra ou nao se aplica>
+            Aplicacao: Supabase Management API; sem arquivo .sql no repo
 
      ┌─────────────────────────────────────────────────────────────────┐
      │ Endpoint novo: POST   /api/tags/:id/favorite                    │
@@ -203,3 +132,187 @@ frontend/components/TagButton.tsx               (existente — perde fetch local
 
 > Convencoes de notacao e dicas de uso: [diagrama-arquitetura.template.plan.md](./diagrama-arquitetura.template.plan.md).
 
+---
+
+## Mapa de arquivos
+
+> **Parte obrigatoria do plano, logo abaixo do Diagrama e antes da Checklist resumida.** Repetir o titulo `Mapa de arquivos` dentro do ASCII para identificar o bloco quando copiado ou compartilhado.
+>
+> Agrupar por caminhos reais e responsabilidade: routes/controllers, services, models/types, components, hooks, services/lib e tests, conforme o escopo. Cada arquivo deve ter uma descricao curta do que faz ou passa a fazer; usar setas para mostrar as dependencias principais. Omitir grupos que nao participam da mudanca.
+>
+> **Formato aprovado:** blocos `BACKEND`, `SUPABASE / DDL` (quando aplicavel) e `FRONTEND`, com o caminho-base no titulo. Separar blocos com linhas de `=`; grupos com linhas de `-`; responsabilidades internas com `--- Nome ---`. Manter a mesma largura dos separadores e alinhar arquivo, contagem e responsabilidade para facilitar a leitura.
+>
+> **Contagens:** cada grupo de arquivos mostra quantidade de arquivos e total de linhas. Services e Hooks tambem mostram as linhas de cada arquivo; grupos compostos, como `Services + lib + types`, mostram subtotal por caminho e total combinado. Medir linhas fisicas dos arquivos atuais (ex.: `wc -l`), incluindo comentarios; identificar estimativas de arquivos ainda nao criados. Referencias por seta nao entram duas vezes na soma. Arquivos compartilhados fora do subtotal ficam explicitamente separados. Recalcular contagens apos alteracoes e nao copiar os placeholders do exemplo para um plano finalizado.
+>
+> **Supabase / DDL:** incluir sempre que a feature criar/alterar estrutura ou configuracao no banco, mesmo sem arquivos SQL no diff. Agrupar tabelas/colunas, RPCs, indices/constraints, RLS/policies/grants, Realtime e Storage conforme o escopo; nomear os objetos reais e resumir responsabilidades. Indicar criado/alterado/preservado e estado previsto/aplicado/conferido, com data quando verificado. Identificar aplicacao via Management API, sem migration `.sql`. O mapa resume o DDL detalhado no Diagrama e na fase; nao precisa duplicar o SQL. Omitir este bloco quando nao houver mudanca de banco.
+>
+> Legenda dos arquivos: `B` = existente reutilizado sem alteracao; `M` = modificado; `N` = novo; `R` = removido/substituido. No planejamento, indicar que os estados sao previstos; durante a execucao, atualizar conforme o realizado. Registrar consolidacoes e substituicoes. O mapa complementa os arquivos por fase e deve acompanhar as mudancas de escopo.
+
+```text
+Mapa de arquivos
+================================================================================
+BACKEND / backend/src/
+================================================================================
+
+Routes + controllers                       2 arquivos, <total> linhas
+  routes/tagRoutes.ts [M]
+    -> controllers/TagController.ts [M]      HTTP, acesso e resposta
+
+--------------------------------------------------------------------------------
+Services                                   1 arquivo, <total> linhas
+  --- Favoritos ---
+  TagFavoriteService.ts [N]                 <n> linhas | adicionar/remover favorito
+    -> models/TagFavoriteModel.ts           persistencia (contada em Models)
+
+--------------------------------------------------------------------------------
+Models + types                             2 arquivos, <total> linhas
+  models/TagFavoriteModel.ts [N]             leitura/escrita de favoritos
+  types/tag.ts [M]                           contratos e isFavorite
+
+--------------------------------------------------------------------------------
+Tests / backend/tests/                     1 arquivo, <total> linhas
+  tagFavorite.test.ts [N]                   idempotencia e isolamento
+
+================================================================================
+SUPABASE / DDL                             <previsto/aplicado/conferido em DATA>
+================================================================================
+
+Public / tabelas e colunas
+  tag_favorites [criar]                     vinculo usuario/tag
+    user_id uuid NOT NULL                  usuario que favoritou
+    tag_id uuid NOT NULL                   tag favorita
+    created_at timestamptz DEFAULT now()    NOT NULL; instante do vinculo
+
+--------------------------------------------------------------------------------
+Indices + acesso + Realtime
+  UNIQUE (user_id, tag_id) [criar]          impede favoritos duplicados
+  RLS/policies/grants [definir]            <operacoes, predicados e roles>
+  publication/Realtime [definir]           <entra, preserva ou nao se aplica>
+  Aplicacao via Management API            sem arquivo .sql; detalhes na fase DDL
+
+================================================================================
+FRONTEND / frontend/
+================================================================================
+
+Components                                 3 arquivos, <total> linhas
+  TagButton.tsx [M]                          acao de favoritar
+  TagList.tsx [M]                            lista e estado de favorito
+  TagSearch.tsx [B]                          busca existente reutilizada
+
+--------------------------------------------------------------------------------
+Hooks                                      1 arquivo, <total> linhas
+  --- Favoritos ---
+  useTagFavorite.ts [N]                     <n> linhas | estado otimista e rollback
+    -> services/apiClient.ts               transporte (contado em Services)
+
+--------------------------------------------------------------------------------
+Services + lib + types                     <qtd> arquivos, <total> linhas
+  --- Services: 1 arquivo, <subtotal> linhas ---
+  services/apiClient.ts [B]                 <n> linhas | transporte autenticado
+  --- Lib: <qtd> arquivos, <subtotal> linhas ---
+  lib/<arquivo-real>.ts [B/M/N]             <n> linhas | <responsabilidade>
+  --- Types: <qtd> arquivos, <subtotal> linhas ---
+  types/<arquivo-real>.ts [B/M/N]           <n> linhas | <contrato>
+
+--------------------------------------------------------------------------------
+Tests / frontend/tests/                    1 arquivo, <total> linhas
+  useTagFavorite.test.ts [N]                atualizacao e rollback no erro
+================================================================================
+```
+
+---
+
+## Checklist resumida
+
+> **Se houver DDL**, a linha da fase correspondente deve enumerar de forma curta a tabela e as mudancas estruturais (colunas, constraints, indices, RLS/policies/grants e Realtime/publication). A fase final deve exigir a verificacao dessas mesmas pos-condicoes no banco. Nunca resumir apenas como "ajustar banco" ou "DDL".
+
+```
+Fase 0: <acao em 1 linha>
+Fase 1: <acao em 1 linha>
+Fase 2: <acao em 1 linha>; DDL em <schema.tabela>: <colunas/tipos + constraints + indices + RLS/Realtime>
+Fase 3: <acao em 1 linha>
+Fase 4: <acao em 1 linha> — opcional
+Fase 6: validar no banco as pos-condicoes do DDL acima — separado
+```
+
+---
+
+## Passo a passo
+
+> **Commits sugeridos:** seguir a [skill de commits](../../../.claude/skills/commit/SKILL.md), fonte da organizacao e apresentacao do lote. Usar `feat(<nome-da-feature>): <area do mapa> - <mudanca concreta>`, com o mesmo prefixo em todas as sugestoes da feature, inclusive testes, hooks e documentacao. A sugestao por fase nao obriga um commit por fase: o agrupamento final segue os caminhos do Mapa de arquivos, com arquivos inteiros, conforme a skill.
+
+> **Reaproveitamento e por fase** — cada fase abre com **Reaproveita**: o que ESTA fase reusa (`arquivo:linha` + como), pra ter o contexto no ponto de implementacao. Nao use uma tabela global desconectada. A busca do que ja existe acontece antes de quebrar em fases, mas o RESULTADO vive dentro de cada fase, colado nas acoes que o consomem. O que e genuinamente novo aparece marcado com ✨ no diagrama e nas acoes da fase.
+>
+> **Graphify e obrigatorio nessa busca** — ao levantar os elementos que serao reaproveitados, combine Explore/`rg` com o grafo versionado em `graphify-out/`. Use as comunidades e arestas `semantically_similar_to` para encontrar mecanismos equivalentes mesmo quando os nomes diferem; para contratos compartilhados, filtre as arestas do `graph.json` pelos simbolos exatos para confirmar callers e leitores. O grafo complementa a leitura do codigo: todo achado citado no **Reaproveita** ainda deve ser validado no arquivo-fonte e registrado como `arquivo:linha` + forma de uso.
+>
+> **Contrato travado** — logo depois do Objetivo, liste as decisoes JA tomadas que continuam valendo depois que a fase fechar. Acao e imperativa e some quando executada ("expor `purpose=import` no controller"); contrato e declarativo e permanece ("a variante de import retorna SOMENTE `id`, `account_id`, `name`, `account_status`"). Teste pra saber se a linha pertence aqui: ela e verificavel depois do commit E alguem razoavel poderia viola-la sem perceber que estava violando. Quase sempre carrega um "nao faca X" com o motivo colado — sem o motivo a regra vira arbitraria e e a primeira a ser reinterpretada por quem implementa. Se a linha nao sobrevive a fase, e acao, nao contrato.
+>
+> **Cenarios obrigatorios** — tabela `cenario -> resultado obrigatorio`, escrita ANTES do codigo e escopada so nesta fase: e a fonte do arquivo de teste, nao um resumo dele (cada linha vira um `it(...)`). Priorize os caminhos feios — erro classificado errado, evento perdido, resposta que sumiu, falha parcial no meio do lote —, que sao os que um executor pula quando o criterio e so "a feature funciona". Nao confundir com **Validacao parcial**: cenario e comportamento provado por teste automatizado; validacao parcial e como confirmar rodando (smoke, log, rota). Fase sem teste automatizado usa so Validacao parcial; fase com teste usa os dois, sem repetir um no outro.
+>
+> **DDL aparece tres vezes, com o mesmo contrato:** se uma fase mexe na estrutura do banco, (1) o **Diagrama** mostra os objetos e relacoes alterados, (2) a **Checklist resumida** enumera a mudanca em uma linha e (3) a **fase correspondente** inclui um bloco `DDL desta fase` com SQL/operacoes equivalentes, tipos, nullability/defaults, constraints, indices, RLS/policies/grants, publication/Realtime, forma de aplicacao, rollback quando pertinente e pos-condicoes verificaveis. Neste projeto, aplicar via Supabase Management API e nao criar migration `.sql`.
+
+### Fase 1 — `<titulo curto>`
+
+**Objetivo:** `<resultado da fase em 1 linha>`.
+
+**Contrato travado:** `<decisoes que continuam valendo depois desta fase: "X retorna SOMENTE Y", "nao faca Z porque W". Omita se a fase nao trava nenhuma decisao.>`
+
+**Reaproveita:** `<o que ESTA fase reusa: arquivo:linha + como reusar. "Nada — fase 100% nova" se for o caso.>`
+
+**DDL desta fase (obrigatorio quando houver alteracao estrutural):** `<schema.tabela; CREATE/ALTER/DROP; cada coluna com tipo/nullability/default; constraints; indices; RLS/policies/grants; publication/Realtime; Management API; rollback; pos-condicoes. Omitir somente quando nao houver DDL.>`
+
+1. Em `<arquivo>`
+2. `<acao concreta>`.
+
+**Cenarios obrigatorios:**
+
+| Cenario | Resultado obrigatorio |
+|---|---|
+| `<estado ou entrada>` | `<o que TEM que acontecer>` |
+| `<caminho feio: erro, evento perdido, falha parcial>` | `<o que TEM que acontecer>` |
+
+**Validacao parcial:** `<como confirmar rodando: smoke, log, rota>`.
+
+**Commit sugerido:** `feat(<nome-da-feature>): <area do mapa> - <mudanca concreta>`
+
+---
+
+### Fase N — `<titulo curto>`
+
+**Objetivo:** `<resultado da fase em 1 linha>`.
+
+**Contrato travado:** `<decisoes desta fase que continuam valendo depois dela.>`
+
+**Reaproveita:** `<o que ESTA fase reusa: arquivo:linha + como reusar.>`
+
+**DDL desta fase (obrigatorio quando houver alteracao estrutural):** `<mesmo contrato exibido no Diagrama e na Checklist resumida; omitir somente quando nao houver DDL.>`
+
+1. `<acao concreta>`.
+
+**Cenarios obrigatorios:**
+
+| Cenario | Resultado obrigatorio |
+|---|---|
+| `<estado ou entrada>` | `<o que TEM que acontecer>` |
+
+**Validacao parcial:** `<como confirmar rodando: smoke, log, rota>`.
+
+**Commit sugerido:** `feat(<nome-da-feature>): <area do mapa> - <mudanca concreta>`
+
+---
+
+### Fase final — Validacao (smoke test)
+
+- Conferir o Mapa de arquivos contra os caminhos e responsabilidades finais; atualizar estados, consolidacoes e contagens.
+- Se houve DDL: consultar o catalogo pela Supabase Management API e provar colunas/tipos/nullability/defaults, constraints, indices, RLS/policies/grants e publication/Realtime exatamente como descritos no Diagrama, na Checklist resumida e na fase correspondente.
+- `npm run typecheck -w backend` → 0 erros.
+- `npm run lint -w backend` → 0 erros.
+- `npm run typecheck -w frontend` → 0 erros.
+- `npm run lint -w frontend` → 0 erros.
+- Testes Jest PERTINENTES (NUNCA a suite inteira — o WSL trava): `npm test -w backend -- <arquivo>` / `npm test -w frontend -- <arquivo>`, ou `-- -o` / `-- --findRelatedTests <arquivo>`.
+- Reinicia backend (`npm run dev -w backend`).
+- Abre `<rota>` no frontend; `<comportamento esperado>`.
+- Faz `<acao chave>`; ve no log:
+  - `[<servico>] <linha esperada>`
+- `<cenario E2E critico>`.
+- `<cenario edge case que costuma quebrar>`.
