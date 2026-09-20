@@ -1,5 +1,7 @@
 'use client'
 
+import Link from 'next/link'
+
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, CircleDashed, Compass, Download, ExternalLink, FileJson, FileSpreadsheet, Info, Loader2, Search, Table2, X } from 'lucide-react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
@@ -883,6 +885,7 @@ function DatasetCard({ dataset }: { dataset: Dataset }) {
               </span>
             </div>
             <p className="mt-1 max-w-3xl text-xs leading-relaxed text-muted-foreground">{dataset.description}</p>
+            {dataset.id === 'senado-receitas-proprias' && <Link href="/dossies?sourceId=senado-receitas-proprias" className="mt-2 inline-block text-xs underline">Dossiês sobre esta fonte →</Link>}
           </div>
           <a
             href={dataset.officialUrl}
