@@ -23,6 +23,7 @@ const NAV_ITEMS = [
   { href: '/inicio', title: 'Início', icon: '🏠' },
   { href: '/camara', title: 'Câmara', icon: '🏛️' },
   { href: '/senado', title: 'Senado', icon: '🗳️' },
+  { href: '/dossies', title: 'Dossiês', icon: '📖' },
   { href: '/fonte-de-dados', title: 'Fonte de dados', icon: '🗂️' },
   // Fora da navegacao, nao deletado: `/componentes` continua existindo e acessivel
   // pela URL — so nao aparece na sidebar do produto.

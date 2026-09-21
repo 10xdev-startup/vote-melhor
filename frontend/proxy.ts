@@ -1,4 +1,5 @@
 import { createServerClient } from '@supabase/ssr'
+import WebSocket from 'ws'
 import { NextResponse, type NextRequest } from 'next/server'
 import { normalizeRedirectTarget } from '@/lib/authRedirect'
 import { isPublicPath } from '@/lib/publicRoutes'
@@ -29,6 +30,7 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
 
   let response = NextResponse.next({ request })
   const supabase = createServerClient(url, key, {
+    realtime: { transport: WebSocket as unknown as typeof globalThis.WebSocket },
     cookies: {
       getAll: () => request.cookies.getAll(),
       setAll(cookiesToSet) {

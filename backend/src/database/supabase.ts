@@ -1,4 +1,5 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import WebSocket from 'ws'
 
 let client: SupabaseClient | null = null
 
@@ -11,7 +12,8 @@ function getClient(): SupabaseClient {
   if (!supabaseUrl || !supabaseKey) {
     throw new Error('SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY são obrigatórios')
   }
-  client = createClient(supabaseUrl, supabaseKey)
+  // O SDK inicializa Realtime mesmo em consultas REST; Node 20 não possui WebSocket global.
+  client = createClient(supabaseUrl, supabaseKey, { realtime: { transport: WebSocket as unknown as typeof globalThis.WebSocket } })
   return client
 }
 

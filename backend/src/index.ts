@@ -9,6 +9,7 @@ import { votacaoRoutes } from '@/routes/votacaoRoutes'
 import { deputyRoutes } from '@/routes/deputyRoutes'
 import { camaraVotingRoutes } from '@/routes/camaraVotingRoutes'
 import { legislativeJourneyRoutes } from '@/routes/legislativeJourneyRoutes'
+import { dossierRoutes } from '@/routes/dossierRoutes'
 import { errorHandler } from '@/middleware'
 
 // Unico ponto de carga da env no backend.
@@ -23,6 +24,7 @@ const app = express()
 const PORT = process.env['PORT'] || 3001
 
 app.use(cors())
+app.use('/dossiers', dossierRoutes)
 app.use(express.json())
 
 app.get('/health', (_req, res) => {
