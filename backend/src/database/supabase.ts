@@ -3,6 +3,11 @@ import WebSocket from 'ws'
 
 let client: SupabaseClient | null = null
 
+// O SDK pede um construtor WebSocketLike (`onerror: Event`). Em Node sem DOM,
+// `typeof globalThis.WebSocket` e o de undici (`onerror: ErrorEvent`) — o mesmo
+// mismatch que o pacote `ws` — e o cast nao fecha o TS2322 do `tsc` no Docker.
+type RealtimeTransport = NonNullable<NonNullable<NonNullable<Parameters<typeof createClient>[2]>['realtime']>['transport']>
+
 // Cria o client sob demanda. As credenciais so sao exigidas no primeiro uso
 // real do banco — nao no boot do processo.
 function getClient(): SupabaseClient {
@@ -13,7 +18,7 @@ function getClient(): SupabaseClient {
     throw new Error('SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY são obrigatórios')
   }
   // O SDK inicializa Realtime mesmo em consultas REST; Node 20 não possui WebSocket global.
-  client = createClient(supabaseUrl, supabaseKey, { realtime: { transport: WebSocket as unknown as typeof globalThis.WebSocket } })
+  client = createClient(supabaseUrl, supabaseKey, { realtime: { transport: WebSocket as unknown as RealtimeTransport } })
   return client
 }
 
