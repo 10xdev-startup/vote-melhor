@@ -3,6 +3,58 @@ import { fireEvent, render, screen, within } from '@testing-library/react'
 import { InvestigationTrailDemo } from '@/components/InvestigationTrailDemo'
 
 describe('InvestigationTrailDemo', () => {
+  it('encontra a pergunta sobre licitação de TI e apresenta orientação documental real', () => {
+    render(<InvestigationTrailDemo />)
+    fireEvent.change(screen.getByLabelText('Pergunta da investigação'), { target: { value: 'Como participar de uma licitação de TI?' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Buscar trilhas' }))
+    expect(screen.getByRole('heading', { name: 'Como participar de uma licitação de TI?' })).toBeInTheDocument()
+    expect(screen.getByText('Orientação baseada em fontes oficiais')).toBeInTheDocument()
+    expect(screen.getByLabelText('Quantidade de etapas')).toHaveTextContent('11 etapas')
+    expect(screen.getAllByRole('article')).toHaveLength(11)
+    expect(screen.getAllByText('Documentação consultada')).toHaveLength(11)
+    expect(screen.queryByRole('combobox', { name: 'Exercício da investigação' })).not.toBeInTheDocument()
+    expect(screen.queryByText(/Cobertura de exemplo/)).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Ver dados de exemplo' })).not.toBeInTheDocument()
+    expect(screen.queryByText(/Exemplo: Acesso testado/)).not.toBeInTheDocument()
+    expect(screen.getByText(/A IN SGD\/ME 94\/2022 tem âmbito próprio no SISP/)).toBeInTheDocument()
+    const opportunity = screen.getAllByRole('article')[1]!
+    expect(within(opportunity).getByRole('link', { name: 'Abrir fonte oficial' })).toHaveAttribute('href', 'https://www.gov.br/pncp/pt-br')
+    expect(within(opportunity).getByText(/Lista de oportunidades com edital, prazo e plataforma identificados/)).toBeInTheDocument()
+    fireEvent.click(within(opportunity).getByRole('button', { name: 'Documentação' }))
+    expect(within(opportunity).getByText(/A proposta é enviada no sistema indicado no edital/)).toBeInTheDocument()
+    expect(within(opportunity).getByText('Revisão documental: 09/10/2026.')).toBeInTheDocument()
+    expect(within(opportunity).getByText(/participação autenticada não foram testados/)).toBeInTheDocument()
+    expect(within(opportunity).getByText(/aplicação de pesquisa depende de JavaScript/)).toBeInTheDocument()
+  })
+
+  it('busca licitação sem acento e permite ler prazos e referências legais', () => {
+    render(<InvestigationTrailDemo />)
+    fireEvent.change(screen.getByLabelText('Pergunta da investigação'), { target: { value: 'licitacao TI' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Buscar trilhas' }))
+    const cards = screen.getAllByRole('article')
+    fireEvent.click(within(cards[6]!).getByRole('button', { name: 'Documentação' }))
+    expect(within(cards[6]!).getByText(/até 3 dias úteis antes da abertura/)).toBeInTheDocument()
+    expect(within(cards[6]!).getByText('Lei 14.133/2021, art. 164')).toBeInTheDocument()
+    fireEvent.click(within(cards[9]!).getByRole('button', { name: 'Documentação' }))
+    expect(within(cards[9]!).getByText(/não são 3 dias para manifestar a intenção/)).toBeInTheDocument()
+    expect(within(cards[9]!).getByRole('link', { name: 'Abrir fonte oficial' })).toHaveAttribute('href', 'https://www.planalto.gov.br/ccivil_03/_ato2019-2022/2021/lei/l14133.htm')
+    expect(within(cards[0]!).getByRole('button', { name: 'Documentação' })).toHaveAttribute('aria-expanded', 'false')
+  })
+
+  it('não inventa gráficos para orientação documental e preserva o exercício fiscal ao retornar', () => {
+    render(<InvestigationTrailDemo />)
+    fireEvent.change(screen.getByRole('combobox', { name: 'Exercício da investigação' }), { target: { value: '2025' } })
+    fireEvent.click(screen.getByRole('button', { name: /Como participar de uma licitação de TI/ }))
+    fireEvent.click(screen.getByRole('tab', { name: 'Gráficos' }))
+    expect(screen.getByText(/Não há uma série de dados para apresentar gráficos/)).toBeInTheDocument()
+    expect(screen.queryByRole('img')).not.toBeInTheDocument()
+    expect(screen.queryByText(/Números fictícios/)).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /Entenda as contas de Minas Gerais/ }))
+    expect(screen.getByRole('combobox', { name: 'Exercício da investigação' })).toHaveValue('2025')
+    expect(screen.getByText('Simulação para validar a experiência')).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: /Composição fictícia da receita/ })).toBeInTheDocument()
+  })
+
   it('alterna Trilha e Gráficos mantendo exercício, território e documentação aberta', () => {
     render(<InvestigationTrailDemo />)
     fireEvent.click(screen.getByRole('button', { name: /Contas públicas do Brasil/ }))
@@ -68,7 +120,7 @@ describe('InvestigationTrailDemo', () => {
   it('encontra as contas do Brasil e troca o território, as fontes e o número de etapas', () => {
     render(<InvestigationTrailDemo />)
     fireEvent.change(screen.getByLabelText('Pergunta da investigação'), { target: { value: 'Contas públicas do Brasil' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Buscar exemplos' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Buscar trilhas' }))
     expect(screen.getByRole('heading', { name: 'Contas públicas do Brasil' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Contas públicas do Brasil/ })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByLabelText('Quantidade de etapas')).toHaveTextContent('9 etapas')
@@ -114,10 +166,10 @@ describe('InvestigationTrailDemo', () => {
   it('busca sem acento e mostra uma lacuna em vez de criar uma trilha sem correspondência', () => {
     render(<InvestigationTrailDemo />)
     fireEvent.change(screen.getByLabelText('Pergunta da investigação'), { target: { value: 'divida' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Buscar exemplos' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Buscar trilhas' }))
     expect(screen.getByRole('button', { name: /Quem financia a dívida de Minas/ })).toBeInTheDocument()
     fireEvent.change(screen.getByLabelText('Pergunta da investigação'), { target: { value: 'astronomia' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Buscar exemplos' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Buscar trilhas' }))
     expect(screen.getByRole('heading', { name: 'Nenhum exemplo para esta pergunta' })).toBeInTheDocument()
     expect(screen.queryByRole('list', { name: 'Etapas da investigação' })).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Ver todos os exemplos' }))

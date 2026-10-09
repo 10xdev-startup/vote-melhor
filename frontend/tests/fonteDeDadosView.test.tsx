@@ -135,6 +135,10 @@ describe("FonteDeDadosView", () => {
     expect(screen.getByText("Simulação para validar a experiência")).toBeInTheDocument()
     expect(getCatalog).not.toHaveBeenCalled()
     expect(getRoadmap).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole("button", { name: /Como participar de uma licitação de TI/ }))
+    expect(screen.getByText("Orientação baseada em fontes oficiais")).toBeInTheDocument()
+    expect(getCatalog).not.toHaveBeenCalled()
+    expect(getRoadmap).not.toHaveBeenCalled()
   })
 
   it("preserva a tab de trilhas na URL e acompanha o histórico do navegador", async () => {
