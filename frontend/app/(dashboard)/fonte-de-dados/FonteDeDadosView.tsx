@@ -211,8 +211,8 @@ function GovernmentInvestmentSummary({ currentFile, preview, comparisons, series
   const totalsCache = useRef(new Map<number, YearComparison>())
   const pendingTotals = useRef(new Map<number, Promise<YearComparison>>())
   const requestId = useRef(0)
-  const displayTerms = [...terms].reverse().map((term) => ({ ...term, years: [...term.years].reverse() }))
-  const governmentYears = displayTerms.flatMap((term) => term.years)
+  const displayTerms = useMemo(() => [...terms].reverse().map((term) => ({ ...term, years: [...term.years].reverse() })), [terms])
+  const governmentYears = useMemo(() => displayTerms.flatMap((term) => term.years), [displayTerms])
   const mandateSources = Array.from(new Map(terms.map((term) => [term.referenceUrl, term.referenceLabel])).entries())
 
   useEffect(() => {
@@ -277,7 +277,7 @@ function GovernmentInvestmentSummary({ currentFile, preview, comparisons, series
     return () => {
       requestId.current += 1
     }
-  }, [currentFile.name, seriesFiles, terms])
+  }, [comparisons.next, comparisons.previous, currentFile.name, currentYear, governmentYears, preview.appliedFilters.length, preview.columnTotals, seriesFiles])
 
   return (
     <section className="mb-3 rounded-md border bg-background p-3" aria-label="Investimentos por gestão estadual">
