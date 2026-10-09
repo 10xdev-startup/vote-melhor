@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useState, type FormEvent } from 'react'
-import { ArrowLeft, ArrowUpRight, ChartNoAxesCombined, CheckCircle2, ChevronDown, CircleDashed, FileText, FlaskConical, ListOrdered, Search, Table2 } from 'lucide-react'
+import { ArrowLeft, ArrowUpRight, BookOpen, ChartNoAxesCombined, CheckCircle2, ChevronDown, CircleDashed, FileText, FlaskConical, ListOrdered, Search, Table2 } from 'lucide-react'
 import { InvestigationTrailChartsDemo } from '@/components/InvestigationTrailChartsDemo'
 import { Input } from '@/components/ui/input'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -17,7 +17,7 @@ const STATUS: Record<InvestigationStatus, { label: string; color: string }> = {
   unavailable: { label: 'Acesso pendente', color: 'border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-300' },
 }
 
-function StepCard({ step, sources, number, year }: { step: InvestigationStep; sources: InvestigationSource[]; number: number; year: number }) {
+function StepCard({ step, sources, number, year, reviewedAt }: { step: InvestigationStep; sources: InvestigationSource[]; number: number; year: number; reviewedAt?: string }) {
   const [expanded, setExpanded] = useState(false)
   const [previewOpen, setPreviewOpen] = useState(false)
   const status = STATUS[step.status]
@@ -36,10 +36,11 @@ function StepCard({ step, sources, number, year }: { step: InvestigationStep; so
               <p className="mt-1 text-sm leading-relaxed text-foreground/80">{step.question}</p>
             </div>
           </div>
-          <span className={cn('rounded-full border px-2.5 py-1 text-[10px] font-medium', status.color)}>Exemplo: {status.label}</span>
+          <span className={cn('rounded-full border px-2.5 py-1 text-[10px] font-medium', status.color)}>{reviewedAt ? 'Documentação consultada' : `Exemplo: ${status.label}`}</span>
         </div>
 
         <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{step.purpose}</p>
+        {step.guidance && <div className="mt-3 space-y-3 text-sm leading-relaxed"><ul className="list-disc space-y-2 pl-5 text-foreground/80">{step.guidance.actions.map((action) => <li key={action}>{action}</li>)}</ul><p className="rounded-md bg-sky-50/60 px-3 py-2 text-xs text-sky-900 dark:bg-sky-950/30 dark:text-sky-200"><span className="font-semibold">Ao final desta etapa: </span>{step.guidance.outcome}</p></div>}
         <div className="mt-3 space-y-2 rounded-md bg-muted/30 px-3 py-2">
           {sources.map((source) => (
             <div key={source.id} className="flex flex-wrap items-center justify-between gap-2">
@@ -52,22 +53,23 @@ function StepCard({ step, sources, number, year }: { step: InvestigationStep; so
           ))}
         </div>
 
-        <p className={cn('mt-2 text-xs', covered ? 'text-muted-foreground' : 'text-amber-700 dark:text-amber-300')}>
+        {reviewedAt ? <p className="mt-2 text-xs text-muted-foreground">Fontes documentais consultadas em {reviewedAt.split('-').reverse().join('/')} · acesso manual</p> : <p className={cn('mt-2 text-xs', covered ? 'text-muted-foreground' : 'text-amber-700 dark:text-amber-300')}>
           {covered ? `Cobertura de exemplo: ${year}${year === 2026 ? ' · exercício parcial' : ''}` : step.coverage.length === 0 ? 'Exemplo de lacuna: acesso ainda pendente. A pergunta permanece na trilha.' : `Sem cobertura de exemplo para ${year}. Anos disponíveis: ${step.coverage.join(', ')}.`}
-        </p>
+        </p>}
 
         <div className="mt-3 flex flex-wrap items-center gap-2">
           {sources.map((source) => <a key={source.id} href={source.officialUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 rounded-md border bg-background px-3 py-2 text-xs font-medium transition-colors hover:bg-muted">Abrir {sources.length === 1 ? 'fonte oficial' : source.title}<ArrowUpRight className="size-3.5" /></a>)}
-          <button type="button" disabled={!canPreview} onClick={() => setPreviewOpen(true)} title={canPreview ? 'Abrir uma amostra ilustrativa' : 'Esta etapa não tem prévia neste exemplo'} className="inline-flex items-center gap-1.5 rounded-md border bg-background px-3 py-2 text-xs font-medium transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40"><Table2 className="size-3.5" />Ver dados de exemplo</button>
+          {!reviewedAt && <button type="button" disabled={!canPreview} onClick={() => setPreviewOpen(true)} title={canPreview ? 'Abrir uma amostra ilustrativa' : 'Esta etapa não tem prévia neste exemplo'} className="inline-flex items-center gap-1.5 rounded-md border bg-background px-3 py-2 text-xs font-medium transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40"><Table2 className="size-3.5" />Ver dados de exemplo</button>}
           <button type="button" aria-expanded={expanded} aria-controls={detailsId} onClick={() => setExpanded(!expanded)} className="ml-auto inline-flex items-center gap-1.5 rounded-md px-2 py-2 text-xs font-medium text-muted-foreground hover:bg-muted"><FileText className="size-3.5" />Documentação<ChevronDown className={cn('size-3.5 transition-transform', expanded && 'rotate-180')} /></button>
         </div>
       </div>
 
       {expanded && <div id={detailsId} className="space-y-4 border-t bg-muted/20 p-4 text-xs leading-relaxed">
-        <div><h4 className="font-semibold">Como consultar</h4>{sources.map((source) => <div key={source.id} className="mt-2"><p className="font-medium">{source.title}</p><p className="mt-1 text-muted-foreground">{source.instructions}</p>{source.endpoint && <code className="mt-2 block overflow-x-auto rounded-md border bg-background p-3 text-[11px]">{source.endpoint}</code>}</div>)}</div>
-        <div><h4 className="font-semibold">Campos a investigar</h4><p className="mt-1 text-muted-foreground">{step.fields.join(' · ')}</p><p className="mt-1 text-muted-foreground">São conceitos do exemplo, não um schema validado. Parâmetros, paginação, limites e autenticação precisam ser conferidos na fonte.</p></div>
+        <div><h4 className="font-semibold">Como consultar</h4>{sources.map((source) => <div key={source.id} className="mt-2"><p className="font-medium">{source.title}</p><p className="mt-1 text-muted-foreground">{source.instructions}</p>{source.reviewNote && <p className="mt-2 rounded-md border bg-background p-2 text-muted-foreground">{source.reviewNote}</p>}{source.endpoint && <code className="mt-2 block overflow-x-auto rounded-md border bg-background p-3 text-[11px]">{source.endpoint}</code>}</div>)}</div>
+        <div><h4 className="font-semibold">{reviewedAt ? 'O que conferir no edital' : 'Campos a investigar'}</h4><p className="mt-1 text-muted-foreground">{step.fields.join(' · ')}</p>{!reviewedAt && <p className="mt-1 text-muted-foreground">São conceitos do exemplo, não um schema validado. Parâmetros, paginação, limites e autenticação precisam ser conferidos na fonte.</p>}</div>
+        {step.guidance && <div><h4 className="font-semibold">Base da orientação</h4><ul className="mt-1 list-disc space-y-1 pl-4 text-muted-foreground">{step.guidance.references.map((reference) => <li key={reference}>{reference}</li>)}</ul></div>}
         <div><h4 className="font-semibold">Conexão com outras informações</h4><p className="mt-1 text-muted-foreground">{step.connection}</p></div>
-        <div className="rounded-md border bg-background p-3"><p className="font-medium">Última verificação: não executada neste protótipo.</p><p className="mt-1 text-muted-foreground">O estado do card é ilustrativo. Abrir um link não verifica a fonte nem altera seu status.</p></div>
+        <div className="rounded-md border bg-background p-3"><p className="font-medium">{reviewedAt ? `Revisão documental: ${reviewedAt.split('-').reverse().join('/')}.` : 'Última verificação: não executada neste protótipo.'}</p><p className="mt-1 text-muted-foreground">{reviewedAt ? 'Orientação baseada na leitura das referências oficiais. Cadastro, envio de proposta e participação autenticada não foram testados. Não há integração com APIs.' : 'O estado do card é ilustrativo. Abrir um link não verifica a fonte nem altera seu status.'}</p></div>
       </div>}
 
       <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
@@ -88,7 +90,7 @@ export function InvestigationTrailDemo() {
   const [view, setView] = useState<'trail' | 'charts'>('trail')
   const results = useMemo(() => {
     // localeCompare evita retirar acentos do texto exibido ou depender de um novo motor de busca.
-    const ignored = new Set(['a', 'o', 'os', 'as', 'de', 'do', 'da', 'dos', 'das', 'e', 'em', 'como', 'quanto', 'quem', 'sao', 'são'])
+    const ignored = new Set(['a', 'o', 'os', 'as', 'um', 'uma', 'de', 'do', 'da', 'dos', 'das', 'e', 'em', 'como', 'quanto', 'quem', 'sao', 'são'])
     const terms = submittedQuery.toLocaleLowerCase('pt-BR').replace(/[?.,!]/g, '').split(/\s+/).filter((term) => term && !ignored.has(term))
     return DEMO_TRAILS.filter((trail) => {
       const words = [trail.title, trail.question, trail.territory, ...trail.searchTerms, ...trail.steps.map((step) => step.title)].join(' ').toLocaleLowerCase('pt-BR').split(/\s+/)
@@ -96,17 +98,18 @@ export function InvestigationTrailDemo() {
     })
   }, [submittedQuery])
   const trail = results.find((candidate) => candidate.id === selectedId) ?? results[0]
+  const research = trail?.research
 
   const search = (event: FormEvent<HTMLFormElement>) => { event.preventDefault(); setSubmittedQuery(query) }
 
   return (
     <div id="trails-panel" role="tabpanel" aria-labelledby="trails-tab" className="mx-auto mt-6 w-full max-w-5xl">
-      <div className="mb-7 flex items-start gap-3 rounded-lg border border-sky-200 bg-sky-50/60 p-3 text-sky-900 dark:border-sky-900 dark:bg-sky-950/30 dark:text-sky-200"><FlaskConical className="mt-0.5 size-4 shrink-0" /><div><p className="text-xs font-semibold">Simulação para validar a experiência</p><p className="mt-1 text-xs leading-relaxed opacity-80">Perguntas e fontes de referência, com estados e cobertura ilustrativos. As buscas desta aba não consultam APIs nem verificam os dados.</p></div></div>
+      <div className="mb-7 flex items-start gap-3 rounded-lg border border-sky-200 bg-sky-50/60 p-3 text-sky-900 dark:border-sky-900 dark:bg-sky-950/30 dark:text-sky-200">{research ? <BookOpen className="mt-0.5 size-4 shrink-0" /> : <FlaskConical className="mt-0.5 size-4 shrink-0" />}<div><p className="text-xs font-semibold">{research ? 'Orientação baseada em fontes oficiais' : 'Simulação para validar a experiência'}</p><p className="mt-1 text-xs leading-relaxed opacity-80">{research ? 'Conteúdo pesquisado em documentos oficiais, com ações práticas e referências por etapa. A consulta nesta tela é local; os links levam às fontes para acesso manual.' : 'Perguntas e fontes de referência, com estados e cobertura ilustrativos. As buscas desta aba não consultam APIs nem verificam os dados.'}</p></div></div>
       <div><p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-sky-700 dark:text-sky-300">Explorar dados públicos</p><h1 className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">O que você quer descobrir?</h1><p className="mt-2 text-sm leading-relaxed text-muted-foreground">Encontre as fontes e os passos para investigar uma pergunta.</p></div>
-      <form onSubmit={search} className="mt-5 flex flex-col gap-2 sm:flex-row"><div className="relative flex-1"><Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" /><Input aria-label="Pergunta da investigação" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Ex.: Quanto Minas arrecada, gasta e deve?" className="h-12 bg-card pl-10 text-sm" /></div><button type="submit" className="rounded-md bg-sky-700 px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-sky-800">Buscar exemplos</button></form>
+      <form onSubmit={search} className="mt-5 flex flex-col gap-2 sm:flex-row"><div className="relative flex-1"><Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" /><Input aria-label="Pergunta da investigação" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Ex.: Quanto Minas arrecada, gasta e deve?" className="h-12 bg-card pl-10 text-sm" /></div><button type="submit" className="rounded-md bg-sky-700 px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-sky-800">Buscar trilhas</button></form>
       <div className="mt-4 flex flex-wrap gap-2" aria-label="Escolher exemplo de investigação">{results.map((example) => <button key={example.id} type="button" aria-pressed={trail?.id === example.id} onClick={() => setSelectedId(example.id)} className={cn('rounded-lg border px-3 py-2 text-left text-xs transition-colors hover:bg-muted', trail?.id === example.id && 'border-sky-300 bg-sky-50 text-sky-900 dark:border-sky-800 dark:bg-sky-950 dark:text-sky-200')}>{example.title}<span className="ml-2 text-[10px] opacity-65">{example.steps.length} etapas</span></button>)}</div>
 
-      {!trail ? <div className="mt-8 rounded-xl border border-dashed p-8 text-center"><CircleDashed className="mx-auto size-6 text-muted-foreground" /><h2 className="mt-3 text-sm font-semibold">Nenhum exemplo para esta pergunta</h2><p className="mt-2 text-xs text-muted-foreground">Tente receita, dívida, Minas ou Brasil. O protótipo não cria uma investigação sem fontes.</p><button type="button" onClick={() => { setQuery(''); setSubmittedQuery('') }} className="mt-4 inline-flex items-center gap-1.5 text-xs font-medium text-sky-700 dark:text-sky-300"><ArrowLeft className="size-3" />Ver todos os exemplos</button></div> : <div className="mt-8">
+      {!trail ? <div className="mt-8 rounded-xl border border-dashed p-8 text-center"><CircleDashed className="mx-auto size-6 text-muted-foreground" /><h2 className="mt-3 text-sm font-semibold">Nenhum exemplo para esta pergunta</h2><p className="mt-2 text-xs text-muted-foreground">Tente receita, dívida, Minas, Brasil ou licitação de TI. O protótipo não cria uma investigação sem fontes.</p><button type="button" onClick={() => { setQuery(''); setSubmittedQuery('') }} className="mt-4 inline-flex items-center gap-1.5 text-xs font-medium text-sky-700 dark:text-sky-300"><ArrowLeft className="size-3" />Ver todos os exemplos</button></div> : <div className="mt-8">
         <div role="tablist" aria-label="Visualização da investigação" className="mb-3 inline-flex gap-1 rounded-lg bg-muted/60 p-1" onKeyDown={(event) => {
           const keys = ['ArrowLeft', 'ArrowRight', 'Home', 'End']
           if (!keys.includes(event.key)) return
@@ -118,16 +121,16 @@ export function InvestigationTrailDemo() {
           {(['trail', 'charts'] as const).map((value) => <button key={value} id={`investigation-${value}-tab`} type="button" role="tab" aria-selected={view === value} aria-controls={`investigation-${value}-panel`} tabIndex={view === value ? 0 : -1} onClick={() => setView(value)} className={cn('flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground', view === value && 'bg-card text-foreground shadow-sm')}>{value === 'trail' ? <ListOrdered className="size-4" /> : <ChartNoAxesCombined className="size-4" />}{value === 'trail' ? 'Trilha' : 'Gráficos'}</button>)}
         </div>
         <section className="overflow-hidden rounded-xl border bg-card" aria-labelledby="selected-trail-title">
-        <div className="border-b bg-sky-50/40 p-4 dark:bg-sky-950/20 sm:p-5"><h2 id="selected-trail-title" className="text-xl font-semibold tracking-tight">{trail.title}</h2><p className="mt-2 text-sm leading-relaxed text-muted-foreground">{trail.description}</p><div className="mt-4 flex flex-wrap items-center gap-2"><span className="rounded-full border bg-background px-3 py-1.5 text-xs">{trail.territory}</span><label className="flex items-center gap-2 rounded-full border bg-background px-3 py-1 text-xs">Exercício<select aria-label="Exercício da investigação" value={year} onChange={(event) => setYear(Number(event.target.value))} className="bg-transparent py-0.5 outline-offset-2">{[2023, 2024, 2025, 2026].map((value) => <option key={value} value={value}>{value}{value === 2026 ? ' (parcial)' : ''}</option>)}</select></label><span className="rounded-full bg-background px-3 py-1.5 text-xs font-medium" aria-label="Quantidade de etapas">{trail.steps.length} etapas</span></div><p className="mt-3 text-xs text-muted-foreground">Ordem sugerida. Você pode abrir qualquer etapa, sem concluir as anteriores.</p></div>
+        <div className="border-b bg-sky-50/40 p-4 dark:bg-sky-950/20 sm:p-5"><h2 id="selected-trail-title" className="text-xl font-semibold tracking-tight">{trail.title}</h2><p className="mt-2 text-sm leading-relaxed text-muted-foreground">{trail.description}</p><div className="mt-4 flex flex-wrap items-center gap-2"><span className="rounded-full border bg-background px-3 py-1.5 text-xs">{trail.territory}</span>{!research && <label className="flex items-center gap-2 rounded-full border bg-background px-3 py-1 text-xs">Exercício<select aria-label="Exercício da investigação" value={year} onChange={(event) => setYear(Number(event.target.value))} className="bg-transparent py-0.5 outline-offset-2">{[2023, 2024, 2025, 2026].map((value) => <option key={value} value={value}>{value}{value === 2026 ? ' (parcial)' : ''}</option>)}</select></label>}<span className="rounded-full bg-background px-3 py-1.5 text-xs font-medium" aria-label="Quantidade de etapas">{trail.steps.length} etapas</span></div>{research && <p className="mt-3 rounded-md border bg-background p-3 text-xs leading-relaxed text-muted-foreground">{research.scope}</p>}<p className="mt-3 text-xs text-muted-foreground">Ordem sugerida. Você pode abrir qualquer etapa, sem concluir as anteriores.</p></div>
         <div id="investigation-trail-panel" role="tabpanel" aria-labelledby="investigation-trail-tab" hidden={view !== 'trail'} tabIndex={0}>
         <ol className="divide-y" aria-label="Etapas da investigação">
           {trail.steps.map((step, index) => (
             <li key={`${trail.id}-${step.id}`} className="w-full">
-              <StepCard step={step} sources={step.sourceIds.map((id) => DEMO_SOURCES[id]!)} number={index + 1} year={year} />
+              <StepCard step={step} sources={step.sourceIds.map((id) => DEMO_SOURCES[id]!)} number={index + 1} year={year} reviewedAt={research?.reviewedAt} />
             </li>
           ))}
         </ol>
-        <div className="border-t bg-muted/20 p-4 sm:p-5"><div className="flex items-center gap-2"><CheckCircle2 className="size-4 text-sky-700 dark:text-sky-300" /><h3 className="text-sm font-semibold">Conectando as informações</h3></div><p className="mt-2 text-xs leading-relaxed text-muted-foreground">Cada etapa indica conceitos, períodos e cuidados para cruzar suas fontes. A quantidade de passos acompanha a pergunta; a presença de um arquivo não garante que a resposta esteja pronta.</p><p className="mt-3 text-xs font-medium">Este exemplo organiza a investigação. Resultados e conclusões dependem da validação dos dados.</p></div>
+        <div className="border-t bg-muted/20 p-4 sm:p-5"><div className="flex items-center gap-2"><CheckCircle2 className="size-4 text-sky-700 dark:text-sky-300" /><h3 className="text-sm font-semibold">Conectando as informações</h3></div><p className="mt-2 text-xs leading-relaxed text-muted-foreground">{research ? 'Use o edital, as retificações e as convocações como fio condutor: oportunidade, requisitos, proposta, decisão e contrato precisam se referir à mesma contratação.' : 'Cada etapa indica conceitos, períodos e cuidados para cruzar suas fontes. A quantidade de passos acompanha a pergunta; a presença de um arquivo não garante que a resposta esteja pronta.'}</p><p className="mt-3 text-xs font-medium">{research ? 'O roteiro orienta a preparação. Requisitos, prazos e canais devem ser conferidos no edital e nas normas aplicáveis ao órgão.' : 'Este exemplo organiza a investigação. Resultados e conclusões dependem da validação dos dados.'}</p></div>
         </div>
         <div id="investigation-charts-panel" role="tabpanel" aria-labelledby="investigation-charts-tab" hidden={view !== 'charts'} tabIndex={0}>
           {view === 'charts' && <InvestigationTrailChartsDemo key={trail.id} trail={trail} year={year} />}

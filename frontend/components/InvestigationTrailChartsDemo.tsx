@@ -8,7 +8,7 @@ import type { InvestigationTrail } from '@/types/investigationTrail'
 export function InvestigationTrailChartsDemo({ trail, year }: { trail: InvestigationTrail; year: number }) {
   const [selectedCategory, setSelectedCategory] = useState(0)
   const charts = DEMO_CHARTS[trail.id]
-  if (!charts) return <p className="p-5 text-sm text-muted-foreground">Este exemplo ainda não tem gráficos ilustrativos.</p>
+  if (!charts) return <p className="p-5 text-sm text-muted-foreground">{trail.research ? 'Esta trilha reúne orientações e documentos oficiais. Não há uma série de dados para apresentar gráficos.' : 'Este exemplo ainda não tem gráficos ilustrativos.'}</p>
 
   const yearIndex = year - 2023
   const categories = charts.revenue?.map((category) => ({ ...category, share: category.shares[yearIndex]! }))
