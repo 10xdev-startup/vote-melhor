@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "@jest/globals"
-import { fireEvent, render, screen, waitFor } from "@testing-library/react"
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react"
 import { FonteDeDadosView } from "@/app/(dashboard)/fonte-de-dados/FonteDeDadosView"
 import { dataCatalogService } from "@/services/dataCatalogService"
 import { CATALOG_FIXTURE } from "./fixtures/dataCatalog"
@@ -417,5 +417,31 @@ describe("FonteDeDadosView", () => {
     const input = await renderView()
     fireEvent.change(input, { target: { value: "votação nominal" } })
     expect(screen.getByText("Nenhum arquivo encontrado")).toBeInTheDocument()
+  })
+
+  it("atualiza os totais por gestão quando chega uma nova prévia sem repetir consultas", async () => {
+    getCatalog.mockResolvedValue([{
+      ...CATALOG_FIXTURE[0]!,
+      governmentTerms: [{ id: "gestao", label: "Gestão de teste", period: "2026", years: [{ year: 2026, governor: "Responsável de teste", transition: false }], referenceLabel: "Fonte oficial", referenceUrl: "https://official.example/gestao" }],
+      editions: [{ id: "investimentos-2026", label: "2026", year: 2026, updatedAt: "2026-10-09", files: [{ ...CATALOG_FIXTURE[0]!.editions[0]!.files[0]!, sourceQuery: { type: "sp-fazenda-expenses", year: 2026, naturePrefixes: ["44"] } }] }],
+    }])
+    const investmentPreview: FilePreview = {
+      ...PREVIEW,
+      columns: ["Exercício", "Grupo da despesa", "Órgão", "Elemento da despesa", "Dotação inicial", "Valor empenhado", "Valor pago"],
+      rows: [["2026", "44", "Órgão de teste", "Elemento de teste", "300,00", "250,00", "100,00"]],
+      facets: [], totalPages: 2, totalRowCount: 40, unfilteredRowCount: 40,
+      columnTotals: { "Dotação inicial": 300, "Dotação atual": 300, "Valor empenhado": 250, "Valor liquidado": 250, "Valor pago": 100 },
+    }
+    getFilePreview.mockResolvedValueOnce(investmentPreview)
+    getFilePreview.mockResolvedValueOnce({ ...investmentPreview, page: 2, columnTotals: { ...investmentPreview.columnTotals, "Valor pago": 200 } })
+    await renderView()
+    expandAllDatasets()
+    fireEvent.click(screen.getByRole("button", { name: /Ver/ }))
+    fireEvent.click(await screen.findByRole("button", { name: "Por gestão" }))
+    const summary = screen.getByRole("region", { name: "Investimentos por gestão estadual" })
+    expect(await within(summary).findByText(/R\$\s100,00/)).toBeInTheDocument()
+    fireEvent.click(screen.getAllByRole("button", { name: "Próxima" })[0]!)
+    expect(await within(summary).findByText(/R\$\s200,00/)).toBeInTheDocument()
+    expect(getFilePreview).toHaveBeenCalledTimes(2)
   })
 })
