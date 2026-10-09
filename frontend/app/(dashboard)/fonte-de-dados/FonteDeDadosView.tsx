@@ -11,6 +11,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { cn } from '@/lib/utils'
 import { filterDatasets } from '@/lib/dataCatalogSearch'
 import { dataCatalogService } from '@/services/dataCatalogService'
+import { InvestigationTrailDemo } from '@/components/InvestigationTrailDemo'
 import type { DataFile, Dataset, DatasetEdition, DatasetGovernmentTerm, FilePreview, FilePreviewFilter, SourceSystem } from '@/types/dataCatalog'
 import type { DataRoadmapItem, DataRoadmapSection, DataRoadmapStatus } from '@/types/dataRoadmap'
 
@@ -1086,12 +1087,17 @@ function RoadmapSummary({ roadmap, error, onOpenData }: { roadmap: DataRoadmapSe
   )
 }
 
+type CatalogTab = 'summary' | 'data' | 'trails'
+const TAB_QUERY: Record<CatalogTab, string> = { summary: 'sumario', data: 'dados', trails: 'trilhas' }
+function tabFromQuery(value: string | null): CatalogTab { return value === 'sumario' ? 'summary' : value === 'trilhas' ? 'trails' : 'data' }
+
 export function FonteDeDadosView() {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
-  const urlTab = searchParams.get('tab') === 'sumario' ? 'summary' : 'data'
-  const [activeTab, setActiveTabState] = useState<'summary' | 'data'>(urlTab)
+  const urlTab = tabFromQuery(searchParams.get('tab'))
+  const [activeTab, setActiveTabState] = useState<CatalogTab>(urlTab)
+  const [catalogEnabled, setCatalogEnabled] = useState(urlTab !== 'trails')
   const [datasets, setDatasets] = useState<Dataset[] | null>(null)
   const [roadmap, setRoadmap] = useState<DataRoadmapSection[] | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -1101,7 +1107,9 @@ export function FonteDeDadosView() {
   useEffect(() => {
     const syncTabFromHistory = () => {
       const params = new URLSearchParams(window.location.search)
-      setActiveTabState(params.get('tab') === 'sumario' ? 'summary' : 'data')
+      const nextTab = tabFromQuery(params.get('tab'))
+      setActiveTabState(nextTab)
+      if (nextTab !== 'trails') setCatalogEnabled(true)
     }
     window.addEventListener('popstate', syncTabFromHistory)
     return () => window.removeEventListener('popstate', syncTabFromHistory)
@@ -1109,14 +1117,15 @@ export function FonteDeDadosView() {
 
   useEffect(() => {
     const tabParam = searchParams.get('tab')
-    if (tabParam === 'sumario' || tabParam === 'dados') return
+    if (tabParam === 'sumario' || tabParam === 'dados' || tabParam === 'trilhas') return
     const params = new URLSearchParams(searchParams.toString())
-    params.set('tab', urlTab === 'summary' ? 'sumario' : 'dados')
+    params.set('tab', TAB_QUERY[urlTab])
     router.replace(`${pathname}?${params.toString()}`, { scroll: false })
   }, [pathname, router, searchParams, urlTab])
 
   // O catalogo vem da API (o `apiClient` le a sessao do Supabase, entao isso e client-side).
   useEffect(() => {
+    if (!catalogEnabled) return
     let active = true
     dataCatalogService
       .getCatalog()
@@ -1138,7 +1147,7 @@ export function FonteDeDadosView() {
     return () => {
       active = false
     }
-  }, [])
+  }, [catalogEnabled])
 
   const results = useMemo(() => filterDatasets(datasets ?? [], query), [datasets, query])
 
@@ -1146,10 +1155,11 @@ export function FonteDeDadosView() {
   const visibleFiles = countFiles(results)
   const sourceCount = datasets ? new Set(datasets.map((dataset) => dataset.organ)).size : 0
 
-  const selectTab = useCallback((nextTab: 'summary' | 'data') => {
+  const selectTab = useCallback((nextTab: CatalogTab) => {
     setActiveTabState(nextTab)
+    if (nextTab !== 'trails') setCatalogEnabled(true)
     const params = new URLSearchParams(searchParams.toString())
-    params.set('tab', nextTab === 'summary' ? 'sumario' : 'dados')
+    params.set('tab', TAB_QUERY[nextTab])
     router.push(`${pathname}?${params.toString()}`, { scroll: false })
   }, [pathname, router, searchParams])
 
@@ -1164,7 +1174,7 @@ export function FonteDeDadosView() {
         <div
           role="tablist"
           aria-label="Visões das fontes de dados"
-          className="flex w-fit rounded-lg border bg-muted/40 p-1"
+          className="flex w-fit max-w-full flex-wrap rounded-lg border bg-muted/40 p-1"
         >
           <button
             id="summary-tab"
@@ -1194,9 +1204,22 @@ export function FonteDeDadosView() {
           >
             Dados
           </button>
+          <button
+            id="trails-tab"
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'trails'}
+            aria-controls="trails-panel"
+            onClick={() => selectTab('trails')}
+            className={cn('rounded-md px-4 py-1.5 text-sm font-medium text-muted-foreground transition-colors', activeTab === 'trails' && 'bg-background text-foreground shadow-sm')}
+          >
+            Trilhas
+          </button>
         </div>
 
-        {activeTab === 'summary' ? (
+        {activeTab === 'trails' ? (
+          <InvestigationTrailDemo />
+        ) : activeTab === 'summary' ? (
           <RoadmapSummary roadmap={roadmap} error={roadmapError} onOpenData={openCatalogAt} />
         ) : (
           <div id="data-panel" role="tabpanel" aria-labelledby="data-tab">
