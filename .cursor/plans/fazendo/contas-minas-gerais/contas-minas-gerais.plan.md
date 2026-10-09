@@ -34,6 +34,26 @@ isProject: false
 
 # Diretório de dados públicos e contas de Minas Gerais
 
+### Nova trilha editorial: participar de licitações de TI
+
+Problema: o usuário quer validar cards sobre uma pergunta prática usando conteúdo real pesquisado, sem integração com APIs. Solução: adicionar uma trilha editorial de participação em licitações de TI com ações, resultado esperado e referências oficiais por etapa. Reaproveitar InvestigationTrailDemo, coleção de etapas variável e documentação expansível. Fluxo: páginas oficiais → curadoria local com data e escopo → busca → cards; nenhuma coleta automática ou DDL.
+
+Contrato: orientação sobre certames da Lei 14.133/2021, com operação federal no Compras.gov.br e normas específicas do SISP identificadas. PNCP localiza oportunidades, plataforma do edital recebe propostas; cadastro e normas federais não são universais. Não tratar consulta de documentação como acesso autenticado testado, criar oportunidades fictícias ou exibir cobertura financeira por ano. Preservar exemplos fiscais e gráficos existentes; a trilha documental não inventa séries para gráficos. Minutas e exigências concretas vêm de cada edital.
+
+Mapa: novo frontend/data/procurementTrail.ts com fontes e conteúdo; investigationTrailDemo.ts inclui o exemplo; types/investigationTrail.ts adiciona orientação e revisão editorial opcionais; InvestigationTrailDemo apresenta orientações e procedência; InvestigationTrailChartsDemo informa ausência de séries; tests/investigationTrailDemo.test.tsx cobre o novo recorte.
+
+| Cenário obrigatório | Resultado |
+|---|---|
+| Buscar “como participar de uma licitação de TI” ou “licitacao TI” | Seleciona a trilha real com sua quantidade de etapas |
+| Abrir orientação e fonte | Ações, resultado esperado, referência e data de consulta; sem “acesso testado” |
+| Selecionar trilha editorial | Sem exercício, cobertura simulada ou prévia fictícia |
+| Abrir Gráficos | Mensagem de ausência de série, sem percentuais inventados |
+| Voltar à trilha fiscal | Mantém ano, simulação e demais interações |
+
+Validação: duas suítes filtradas, typecheck e lint dos arquivos afetados conforme autorização da sessão; build apenas em commit. Commit/push não fazem parte desta solicitação. Pesquisa: PNCP, SICAF e serviço de cadastramento, Lei 14.133, IN SEGES/ME 73/2022 atualizada, IN SGD/ME 94/2022 e manual online do TCU. PDFs antigos de guia/pregão redirecionaram para login; não são usados como leitura confirmada. PNCP app exige execução de JavaScript; evidência de funcionamento operacional não foi obtida.
+
+Implementado em 09/10/2026: 11 etapas com ações e resultado esperado, dez referências oficiais separadas em procurementTrail.ts, revisão documental e notas de acesso. O guia atual vinculado na página do fornecedor abriu como PDF e foi incluído; os links antigos restritos foram descartados. Busca aceita a pergunta completa e termos sem acento; trilha documental não mostra exercício, cobertura simulada ou amostra fictícia. Validação: 36 testes passaram nas duas suítes filtradas; typecheck e lint dos arquivos afetados passaram sem erros/avisos. Sem build, alterações de banco, commit, push ou deploy desta fatia. Revisão visual pelo usuário pendente.
+
 Status: plano geral; primeira fatia de persistência autorizada pelo usuário em 08/10/2026. Investigação inicial na mesma data.
 
 O primeiro produto será uma trilha que explica onde obter os dados, como consultá-los e quais validações são necessárias. A implementação deve ampliar o catálogo existente no backend, persistir o conhecimento no Supabase e apresentar os cards necessários em coluna única, sem quantidade fixa. O frontend não será responsável pelas URLs ou pela curadoria das fontes.
