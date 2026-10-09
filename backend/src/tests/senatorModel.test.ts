@@ -6,6 +6,7 @@ import type { SenadoRawSenator, SenadoRawVotacao } from '@/types/senado'
 jest.mock('@/utils/fetchSenado', () => ({
   fetchCurrentSenators: jest.fn(),
   fetchNominalVotacoes: jest.fn(),
+  getSenadoCollectedAt: () => '2026-10-08T20:00:00.000Z',
   currentYear: () => 2026,
   RECORD_FROM_YEAR: 2019,
 }))
@@ -97,7 +98,7 @@ describe('SenatorModel.listSenators — quem está na urna', () => {
     expect(payload.sourceVersion).toBe('16/08/2026 22:14:57')
     expect(payload.coverage.fromYear).toBe(2019)
     expect(payload.coverage.votacaoCount).toBe(1)
-    expect(payload.collectedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/)
+    expect(payload.collectedAt).toBe('2026-10-08T20:00:00.000Z')
   })
 
   /** Cada senador tem denominador proprio — comparar contagem absoluta entre eles mente. */

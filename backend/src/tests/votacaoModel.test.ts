@@ -3,7 +3,7 @@ import { fetchNominalVotacoes } from '@/utils/fetchSenado'
 import { VotacaoModel } from '@/models/VotacaoModel'
 import type { SenadoRawVotacao } from '@/types/senado'
 
-jest.mock('@/utils/fetchSenado', () => ({ fetchNominalVotacoes: jest.fn(), currentYear: () => 2026, RECORD_FROM_YEAR: 2019 }))
+jest.mock('@/utils/fetchSenado', () => ({ fetchNominalVotacoes: jest.fn(), getSenadoCollectedAt: () => '2026-10-08T20:00:00.000Z', currentYear: () => 2026, RECORD_FROM_YEAR: 2019 }))
 
 const mockedVotacoes = fetchNominalVotacoes as jest.MockedFunction<typeof fetchNominalVotacoes>
 

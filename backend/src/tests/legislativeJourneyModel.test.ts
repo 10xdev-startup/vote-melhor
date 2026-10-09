@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, jest } from '@jest/globals'
 import { LegislativeJourneyModel } from '@/models/LegislativeJourneyModel'
 import { fetchSenadoProcess } from '@/utils/fetchSenado'
 
-jest.mock('@/utils/fetchSenado', () => ({ fetchSenadoProcess: jest.fn() }))
+jest.mock('@/utils/fetchSenado', () => ({ fetchSenadoProcess: jest.fn(), getSenadoProcessCollectedAt: () => '2026-10-08T20:00:00.000Z' }))
 
 const mockedFetch = fetchSenadoProcess as jest.MockedFunction<typeof fetchSenadoProcess>
 

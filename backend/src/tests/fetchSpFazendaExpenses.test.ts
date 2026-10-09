@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, jest } from '@jest/globals'
-import { clearSpFazendaExpensesCache, fetchSpFazendaExpenses, parseSpFazendaExpensesXml } from '@/utils/fetchSpFazendaExpenses'
+import { clearSpFazendaExpensesCache, fetchSpFazendaExpenses, fetchSpFazendaOriginal, parseSpFazendaExpensesXml, renderSpFazendaExpenses } from '@/utils/fetchSpFazendaExpenses'
 
 const XML = `<?xml version="1.0" encoding="utf-8"?><soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"><soap:Body><ConsultarDespesasDotacaoResponse xmlns="http://fazenda.sp.gov.br/wstransparencia"><ConsultarDespesasDotacaoResult><CodigoRetorno>0</CodigoRetorno><DescricaoCodigoRetorno>3 item(ns) retornado(s).</DescricaoCodigoRetorno><ListaItensDespesa><ItemDespesa><CodigoNomeOrgao>16000 - SECRETARIA DA SAUDE</CodigoNomeOrgao><CodigoNomeElemento>449051 - OBRAS E INSTALACOES</CodigoNomeElemento><ValorDotacaoInicial>1.000,00</ValorDotacaoInicial><ValorDotacaoAtual>2.000,00</ValorDotacaoAtual><ValorEmpenhado>1.500,00</ValorEmpenhado><ValorLiquidado>1.200,00</ValorLiquidado><ValorPago>1.100,00</ValorPago><ValorPagoAnosAnteriores>100,00</ValorPagoAnosAnteriores></ItemDespesa><ItemDespesa><CodigoNomeOrgao>37000 - SECRETARIA DE TRANSPORTES</CodigoNomeOrgao><CodigoNomeElemento>459065 - CONSTITUICAO DE CAPITAL</CodigoNomeElemento><ValorDotacaoInicial>3.000,00</ValorDotacaoInicial><ValorDotacaoAtual>4.000,00</ValorDotacaoAtual><ValorEmpenhado>3.500,00</ValorEmpenhado><ValorLiquidado>3.200,00</ValorLiquidado><ValorPago>3.100,00</ValorPago><ValorPagoAnosAnteriores>200,00</ValorPagoAnosAnteriores></ItemDespesa><ItemDespesa><CodigoNomeOrgao>08000 - SECRETARIA DA EDUCACAO</CodigoNomeOrgao><CodigoNomeElemento>339039 - SERVICOS DE TERCEIROS</CodigoNomeElemento><ValorDotacaoInicial>5.000,00</ValorDotacaoInicial></ItemDespesa></ListaItensDespesa></ConsultarDespesasDotacaoResult></ConsultarDespesasDotacaoResponse></soap:Body></soap:Envelope>`
 
@@ -35,5 +35,14 @@ describe('fetchSpFazendaExpenses', () => {
   it('rejeita erro declarado pelo serviço mesmo quando o HTTP é 200', () => {
     const failedXml = XML.replace('<CodigoRetorno>0</CodigoRetorno>', '<CodigoRetorno>-30</CodigoRetorno>').replace('3 item(ns) retornado(s).', 'Parâmetros inválidos')
     expect(() => parseSpFazendaExpensesXml(failedXml)).toThrow('A Fazenda recusou a consulta')
+  })
+  it('preserva os bytes SOAP antes da seleção e reproduz o preview sem rede', async () => {
+    const mockedFetch = jest.fn(async () => new Response(XML, { status: 200 }))
+    global.fetch = mockedFetch as typeof fetch
+    const original = await fetchSpFazendaOriginal(2024)
+    expect(original.body).toEqual(Buffer.from(XML))
+    const query = { type: 'sp-fazenda-expenses' as const, year: 2024, naturePrefixes: ['44' as const, '45' as const] }
+    expect(renderSpFazendaExpenses(original.body, query)).toEqual(await fetchSpFazendaExpenses(query))
+    expect(mockedFetch).toHaveBeenCalledTimes(1)
   })
 })

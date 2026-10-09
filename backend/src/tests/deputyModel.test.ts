@@ -52,6 +52,7 @@ function serve(overrides: Partial<CamaraVotingDataset> = {}): void {
       { votingId: 'v1', proposition: { id: 11, title: 'PL 2/2026', summary: 'Projeto', apiUrl: 'https://api/proposicoes/11', officialPageUrl: 'https://www.camara.leg.br/propostas-legislativas/11' } },
     ],
     sourceUpdatedAt: '2026-08-16T06:57:59.000Z',
+    collectedAt: '2026-10-08T20:00:00.000Z',
     ...overrides,
   })
 }

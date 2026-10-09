@@ -4,6 +4,7 @@ import { get as httpsGet } from 'node:https'
 import type { ClientRequest, IncomingMessage } from 'node:http'
 import { beforeEach, describe, expect, it, jest } from '@jest/globals'
 import { fetchSourceFile } from '@/utils/fetchSourceFile'
+import { officialHttpGet } from '@/utils/officialHttpGet'
 
 jest.mock('node:https', () => ({ get: jest.fn() }))
 
@@ -84,5 +85,11 @@ describe('fetchSourceFile', () => {
       status: 502,
       code: 'SOURCE_UNAVAILABLE',
     })
+  })
+  it('limita os bytes baixados e não segue redirects para hosts fora do adaptador', async () => {
+    mockResponse(200, '12345')
+    await expect(officialHttpGet('https://dados.mg.gov.br/file', { timeoutMs: 1000, maxBytes: 4 })).rejects.toThrow('limite de bytes')
+    mockResponse(302, '', { location: 'https://untrusted.example/file' })
+    await expect(officialHttpGet('https://dados.mg.gov.br/file', { timeoutMs: 1000, allowedHosts: ['dados.mg.gov.br'] })).rejects.toThrow('não permitida')
   })
 })

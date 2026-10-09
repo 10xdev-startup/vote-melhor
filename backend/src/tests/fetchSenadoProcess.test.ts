@@ -1,39 +1,16 @@
-import { EventEmitter } from 'node:events'
-import { PassThrough } from 'node:stream'
-import { get as httpsGet } from 'node:https'
-import type { ClientRequest, IncomingMessage } from 'node:http'
 import { beforeEach, describe, expect, it, jest } from '@jest/globals'
-import { clearSenadoCache, fetchSenadoProcess } from '@/utils/fetchSenado'
+import { clearSenadoCache, fetchSenadoProcess, getSenadoProcessCollectedAt } from '@/utils/fetchSenado'
+import { OfficialDataModel } from '@/models/OfficialDataModel'
+import { senadoProcessUrl } from '@/utils/legislativeArchiveRequests'
 
-// Mocka `node:https`, nao `global.fetch`: o cliente do Senado passou a usar o
-// `officialHttpGet` por causa do handshake TLS que nao fecha em legis.senado.leg.br.
-// Com o mock no `fetch`, este teste sairia para a rede de verdade sem avisar.
-jest.mock('node:https', () => ({ get: jest.fn() }))
-
-const mockedHttpsGet = httpsGet as jest.MockedFunction<typeof httpsGet>
-
-beforeEach(() => {
-  mockedHttpsGet.mockReset()
-  clearSenadoCache()
-})
-
+jest.mock('@/models/OfficialDataModel')
+const model = jest.mocked(OfficialDataModel)
+beforeEach(() => { jest.resetAllMocks(); clearSenadoCache() })
 function mockJsonResponse(payload: unknown, assertUrl?: (url: string) => void): void {
-  mockedHttpsGet.mockImplementationOnce(((url: URL, _options: unknown, callback: (response: IncomingMessage) => void) => {
-    assertUrl?.(String(url))
-
-    const request = new EventEmitter() as ClientRequest
-    const stream = new PassThrough()
-    const response = stream as unknown as IncomingMessage
-    response.statusCode = 200
-    response.headers = { 'content-type': 'application/json' }
-
-    queueMicrotask(() => {
-      callback(response)
-      stream.end(JSON.stringify(payload))
-    })
-
-    return request
-  }) as typeof httpsGet)
+  model.readArchive.mockImplementationOnce(async (url) => {
+    assertUrl?.(url)
+    return { body: Buffer.from(JSON.stringify(payload)), format: 'JSON', fetchedAt: '2026-10-08T20:00:00.000Z', dependencies: {}, sourceUrl: url, snapshotId: 'stored-process' }
+  })
 }
 
 describe('fetchSenadoProcess', () => {
@@ -73,5 +50,17 @@ describe('fetchSenadoProcess', () => {
   it('devolve null quando a matéria não existe no filtro', async () => {
     mockJsonResponse([])
     await expect(fetchSenadoProcess('PEC', 221, 2019)).resolves.toBeNull()
+  })
+})
+
+describe('procedência da tramitação preservada', () => {
+  it('usa a data real da coleta e não converte erro do banco em matéria ausente', async () => {
+    mockJsonResponse([])
+    await fetchSenadoProcess('PEC', 221, 2019)
+    expect(getSenadoProcessCollectedAt('PEC', 221, 2019)).toBe('2026-10-08T20:00:00.000Z')
+    expect(model.readArchive).toHaveBeenCalledWith(senadoProcessUrl('PEC', 221, 2019))
+    clearSenadoCache()
+    model.readArchive.mockRejectedValue(new Error('Banco indisponível'))
+    await expect(fetchSenadoProcess('PEC', 221, 2019)).rejects.toThrow('Banco indisponível')
   })
 })
