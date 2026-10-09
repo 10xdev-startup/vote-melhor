@@ -378,6 +378,9 @@ export const DataCatalogModel = {
   listDatasets(): Dataset[] {
     return DATASETS
   },
+  findDatasetByFileId(fileId: string): Dataset | undefined {
+    return DATASETS.find((dataset) => dataset.editions.some((edition) => edition.files.some((file) => file.id === fileId)))
+  },
 
   /**
    * Resolve o arquivo pelo id. E o que impede o preview de virar proxy aberto: o backend so

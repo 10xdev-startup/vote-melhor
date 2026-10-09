@@ -46,6 +46,7 @@ export interface CamaraRawAffectedProposition {
 }
 
 export interface CamaraVotingDataset {
+  collectedAt: string
   deputies: CamaraRawDeputy[]
   votings: CamaraRawVoting[]
   votes: CamaraRawVote[]

@@ -1,4 +1,4 @@
-import { fetchSenadoProcess } from '@/utils/fetchSenado'
+import { fetchSenadoProcess, getSenadoProcessCollectedAt } from '@/utils/fetchSenado'
 import type { SenadoRawProcess } from '@/types/senado'
 import type { LegislativeJourney, LegislativeJourneyStep } from '@/types/legislativeJourney'
 
@@ -75,6 +75,9 @@ function buildSteps(process: SenadoRawProcess): LegislativeJourneyStep[] {
 }
 
 export const LegislativeJourneyModel = {
+  listProcessRequests(): { id: string; sigla: string; number: number; year: number }[] {
+    return Object.entries(JOURNEYS).map(([id, config]) => ({ id, ...config }))
+  },
   async getJourney(id: string): Promise<LegislativeJourney | null> {
     const config = JOURNEYS[id]
     if (!config) return null
@@ -91,7 +94,7 @@ export const LegislativeJourneyModel = {
       currentStatus: process.status,
       currentStatusAt: process.statusAt,
       sourceUpdatedAt: process.sourceUpdatedAt,
-      collectedAt: new Date().toISOString(),
+      collectedAt: getSenadoProcessCollectedAt(config.sigla, config.number, config.year),
       processing: process.processing,
       sourceUrl,
       documentUrl: process.documentUrl,

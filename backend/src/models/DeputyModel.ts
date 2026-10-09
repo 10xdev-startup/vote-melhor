@@ -35,7 +35,7 @@ export const DeputyModel = {
     const dates = dataset.votings.map((voting) => voting.date).filter((date): date is string => date !== null).sort()
 
     return {
-      collectedAt: new Date().toISOString(),
+      collectedAt: dataset.collectedAt,
       sourceUpdatedAt: dataset.sourceUpdatedAt,
       sourceUrls: [...CAMARA_SOURCE_URLS],
       coverage: {
