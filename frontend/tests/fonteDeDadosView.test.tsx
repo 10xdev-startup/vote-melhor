@@ -127,6 +127,29 @@ function expandAllDatasets() {
 }
 
 describe("FonteDeDadosView", () => {
+  it("abre diretamente a simulação de trilhas sem depender da API do catálogo", () => {
+    window.history.replaceState(null, "", "/fonte-de-dados?tab=trilhas")
+    render(<FonteDeDadosView />)
+    expect(screen.getByRole("tab", { name: "Trilhas" })).toHaveAttribute("aria-selected", "true")
+    expect(screen.getByRole("tabpanel", { name: "Trilhas" })).toHaveAttribute("id", "trails-panel")
+    expect(screen.getByText("Simulação para validar a experiência")).toBeInTheDocument()
+    expect(getCatalog).not.toHaveBeenCalled()
+    expect(getRoadmap).not.toHaveBeenCalled()
+  })
+
+  it("preserva a tab de trilhas na URL e acompanha o histórico do navegador", async () => {
+    await renderView()
+    fireEvent.click(screen.getByRole("tab", { name: "Trilhas" }))
+    expect(window.location.search).toBe("?tab=trilhas")
+    expect(screen.getByRole("tab", { name: "Trilhas" })).toHaveAttribute("aria-selected", "true")
+    window.history.replaceState(null, "", "/fonte-de-dados?tab=dados")
+    fireEvent(window, new PopStateEvent("popstate"))
+    expect(screen.getByRole("tab", { name: "Dados" })).toHaveAttribute("aria-selected", "true")
+    expect(screen.getByLabelText("Buscar no catálogo")).toBeInTheDocument()
+    expect(getCatalog).toHaveBeenCalledTimes(1)
+    expect(getRoadmap).toHaveBeenCalledTimes(1)
+  })
+
   it("abre diretamente na aba indicada pela URL", async () => {
     window.history.replaceState(null, "", "/fonte-de-dados?tab=sumario")
     render(<FonteDeDadosView />)
