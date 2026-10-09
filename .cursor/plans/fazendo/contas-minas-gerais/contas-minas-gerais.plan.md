@@ -1,6 +1,6 @@
 ---
 name: "Diretório de dados públicos e contas de Minas Gerais"
-overview: "Plano para um catálogo reutilizável de fontes oficiais e uma trilha vertical de seis etapas sobre as contas de Minas Gerais, baseado no código, no schema real e em consultas verificadas."
+overview: "Plano para um catálogo reutilizável de fontes oficiais e trilhas verticais com quantidade variável de etapas sobre as contas de Minas Gerais, baseado no código, no schema real e em consultas verificadas."
 todos:
   - id: auditoria
     content: "Consolidar auditoria do repositório e do schema existente"
@@ -36,7 +36,27 @@ isProject: false
 
 Status: plano geral; primeira fatia de persistência autorizada pelo usuário em 08/10/2026. Investigação inicial na mesma data.
 
-O primeiro produto será uma trilha que explica onde obter os dados, como consultá-los e quais validações são necessárias. A implementação deve ampliar o catálogo existente no backend, persistir o conhecimento no Supabase e apresentar seis cards em coluna única. O frontend não será responsável pelas URLs ou pela curadoria das fontes.
+O primeiro produto será uma trilha que explica onde obter os dados, como consultá-los e quais validações são necessárias. A implementação deve ampliar o catálogo existente no backend, persistir o conhecimento no Supabase e apresentar os cards necessários em coluna única, sem quantidade fixa. O frontend não será responsável pelas URLs ou pela curadoria das fontes.
+
+### Correção de escopo: quantidade variável de cards
+
+Exemplo adicional autorizado: “Contas públicas do Brasil”, no mesmo componente e card principal, com nove etapas ilustrativas próprias. Distinguir União, Governo Central, Governo Geral e setor público conforme as fontes; incluir receitas/despesas federais, transferências, resultado primário, dívida federal, serviço da dívida, consolidação e PIB nacional. Fontes de referência: CGU, Tesouro Nacional, Banco Central e IBGE; nenhum endpoint ou dado financeiro novo é considerado operacional. As páginas de referência foram pesquisadas: receita federal e despesa abriram, consulta de transferências exigiu JavaScript/checagem anti-robô e página do RMD retornou 503 apesar do vínculo oficial no Tesouro. Não converter localização da página em “acesso testado” aos arquivos. Critérios: busca por Brasil seleciona o novo exemplo sem mudar o recorte de Minas, quantidade real da coleção, fontes federais, distinção de perímetros e prévia explicitamente ilustrativa. Testes filtrados e typecheck/lint; sem build.
+
+Ajuste visual atual após a revisão: um card principal contém cabeçalho, filtros, etapas e conexões. Etapas são seções internas contíguas, separadas por divisórias discretas, com numeração junto ao título; sem linha do tempo externa ou caixas individuais. Manter uma coluna, abertura independente e contagem variável. Conferir as interações pelos testes existentes e validar visualmente com o usuário. Sem build nesta fase.
+
+Nova fatia visual autorizada: tabs internas “Trilha” e “Gráficos” imediatamente acima do card principal. Manter território, exercício e seleção de exemplo nas duas vistas. Gráficos ilustrativos de composição das receitas, distribuição das despesas e evolução da dívida, conforme o tema da trilha; dados fictícios separados em fixture, identificados em cada gráfico, sem unidades monetárias reais ou cálculos entre perímetros incompatíveis. Reutilizar Tailwind, ícones e SVG nativo; sem bibliotecas, APIs ou banco novos. Cenários obrigatórios: alternar tabs preserva contexto e documentação aberta; ano altera exemplo visual; trocar para trilha de dívida restringe os gráficos ao tema; selecionar categoria revela sua parcela; teclado navega entre as tabs; acesso direto à tab externa continua sem chamar catálogo. Validação: duas suítes Jest filtradas, typecheck e lint sequenciais; sem build. Arquivos: InvestigationTrailDemo, novo InvestigationTrailChartsDemo, fixture de gráficos e testes existentes.
+
+Fatia visual implementada: tabs acima do card compartilhando cabeçalho e exercício; a vista Trilha preserva a documentação aberta durante a alternância. Gráficos com rosca interativa, barras e série de índice fictício com tabela acessível; seleção de tema restringe as perspectivas. Brasil possui categorias ilustrativas próprias e aviso de perímetros independentes. Validação final: 33 testes passaram nas duas suítes filtradas; typecheck e lint dos arquivos envolvidos passaram sem erros ou warnings. Sem build, commit, push ou deploy; revisão visual de desktop/mobile pelo usuário permanece pendente.
+
+Próxima fatia autorizada: protótipo exclusivamente visual na aba “Trilhas” de `/fonte-de-dados`, acessível por `?tab=trilhas`. Reaproveitar tabs, componentes e estilos existentes; separar exemplos locais do componente e do futuro catálogo operacional. Sem nova rota, chamadas de coleta ou escrita no banco. Exemplos com 2, 3 e 8 etapas, busca de exemplos, ano/cobertura, cards em coluna única, documentação expansível e visualização ilustrativa. Cada status e amostra deve indicar simulação; nenhuma verificação fictícia. Critérios: acesso direto e histórico das tabs, contagem variável, abertura independente dos cards, ano sem cobertura, busca sem correspondência e protótipo utilizável sem a API do catálogo. Testes filtrados da tela e do protótipo; typecheck/lint sequenciais já autorizados pelo usuário nesta sessão. Commit/push desta fatia somente após apresentação do lote correspondente.
+
+Protótipo implementado: `InvestigationTrailDemo`, exemplos locais separados e contrato TypeScript próprio; tab `trilhas` integrada à URL e ao histórico, sem depender da API do catálogo no acesso direto. O catálogo real carrega somente ao visitar Dados/Sumário e não é reconsultado ao alternar as abas. Duas suítes filtradas passaram (28 testes); typecheck e lint do frontend passaram sem erros/avisos. O build Webpack iniciado durante a validação terminou com sucesso antes da interrupção, mas o usuário determinou que novos builds sejam executados somente na etapa de commit; regra registrada no CLAUDE.md e na skill de commit. Revisão visual pelo usuário continua necessária, incluindo mobile e desktop. Exemplos e estados ilustrativos não constituem fontes operacionalmente verificadas ou indicadores financeiros. Sem commit, push ou deploy desta fatia.
+
+O usuário esclareceu que os seis temas iniciais são um roteiro de investigação, não um template obrigatório nem um limite para Minas. A quantidade de cards resulta das etapas necessárias para a pergunta e o recorte investigados; pode ser menor ou maior que seis. Cada card representa uma pergunta ou operação verificável e pode referenciar vários recursos. Arquivos anuais, páginas de uma API e dimensões auxiliares não criam automaticamente novos cards. Uma fonte pode ser reutilizada entre etapas e trilhas; uma lacuna necessária deve aparecer explicitamente, mesmo sem dados coletados.
+
+O próximo recorte começa pelo contrato genérico de trilha, etapa e vínculos com o acervo já existente (`public_data_sources`, `public_data_resources`, `public_data_snapshots`, `public_data_records`). O desenho de dez tabelas abaixo é a proposta anterior à implementação do acervo: deve ser revisado antes de qualquer DDL para evitar duplicar catálogo, recursos, versões e verificações. Proposta mínima a validar: trilhas, etapas e referências das etapas aos recursos existentes, com pergunta, instruções, ordem sugerida, revisão e evidências; sem campo que imponha seis etapas.
+
+Validar primeiro uma fatia completa usando receita de Minas, já preservada: cadastro da etapa, leitura pela API, card, documentação e preview existentes. Esse ensaio não representa cobertura completa das contas do Estado. Depois, ampliar a investigação e os recursos conforme as perguntas necessárias, distinguindo dados preservados de documentação apenas localizada. A interface renderiza a coleção devolvida pela API e calcula a contagem a partir dela; critérios incluem trilhas vazias, com uma etapa e com mais de seis, sem preencher artificialmente cards faltantes.
 
 As consultas realizadas confirmaram dados de receita, execução da dívida, despesa por empenho, Siconfi e PIB. Também revelaram recursos com HTTP 200 e nenhum registro. Por isso, a capacidade de mostrar dados precisa ser definida por recurso e consulta, com evidência; localizar documentação não basta.
 
@@ -61,7 +81,7 @@ erDiagram
   public_data_snapshots ||--o{ public_data_records : registros
 ```
 
-Esta fatia antecipa a persistência que o plano original deixava para a fase 8. O modelo completo de trilhas poderá referenciar as fontes e recursos existentes, sem duplicar originais nem fixar os seis cards no frontend.
+Esta fatia antecipa a persistência que o plano original deixava para a fase 8. O modelo completo de trilhas poderá referenciar as fontes e recursos existentes, sem duplicar originais nem fixar quantidade ou conteúdo de cards no frontend.
 
 A infraestrutura implementada é genérica: pipeline `importOfficialData`, quatro tabelas compartilhadas e rotas por fonte/recurso. Minas fica somente no adaptador. A primeira carga preservou 14 originais e 77.755 registros de receita (2018–2026); reexecuções não duplicaram a receita. Quatro dimensões vieram vazias e duas incompletas: cinco relações foram validadas, seis permanecem pendentes, documentadas no snapshot. A interface e os demais adaptadores ainda não foram implementados nesta fatia. Evidências e operação: [official-data.md](../../../../backend/docs/official-data.md).
 
@@ -407,7 +427,7 @@ Entidades propostas, ainda inexistentes no banco:
 
 Uma base tem vários recursos; um recurso tem várias versões/verificações. Uma trilha tem várias etapas. A mesma base pode atender várias etapas e trilhas. Uma etapa pode utilizar fontes principal, complementar e de reconciliação.
 
-Não criar uma tabela universal de observações financeiras nesta fase. Não copiar toda a execução mineira para PostgreSQL para poder exibir seis cards. Definir tabelas financeiras somente na fase 8, a partir da granularidade validada.
+Não criar uma tabela universal de observações financeiras nesta fase. Não copiar toda a execução mineira para PostgreSQL somente para exibir os cards da trilha. Definir tabelas financeiras somente na fase 8, a partir da granularidade validada.
 
 ### Contrato de banco proposto
 
@@ -502,7 +522,7 @@ Manifestos de curadoria + evidências sanitizadas (NOVOS)
      RLS ON; anon/authenticated sem acesso direto; service_role no backend
      Sem Realtime, Storage, views ou RPC nesta entrega
   -> Models -> Controllers -> envelope padrão (existentes ampliados)
-  -> services -> FonteDeDadosView -> seis cards verticais (NOVOS)
+  -> services -> FonteDeDadosView -> coleção variável de cards verticais (NOVOS)
      -> detalhes técnicos e preview compatível
      -> links oficiais e conexão entre fontes
 ~~~
@@ -585,22 +605,16 @@ O que você quer descobrir?
 [ Quanto Minas arrecada, gasta e deve?                  ] [Buscar]
 
 Trilha: Entenda as contas de Minas Gerais
-[Minas Gerais] [Exercício] [6 etapas]
+[Minas Gerais] [Exercício] [N etapas: contagem da API]
 Sequência sugerida. Você pode abrir qualquer etapa.
 
-[01 Receita do Estado                                 ]
+[01 Pergunta investigável da primeira etapa            ]
 [pergunta / publicador / base / acesso / evidência     ]
 [Abrir fonte] [Ver dados, quando compatível] [Técnico  ]
                          ↓
-[02 Despesas do Estado                                ]
+[02 Próxima pergunta necessária                       ]
                          ↓
-[03 Dívida Pública                                    ]
-                         ↓
-[04 Juros e amortizações                              ]
-                         ↓
-[05 Indicadores Fiscais                               ]
-                         ↓
-[06 Economia de Minas                                 ]
+[... demais etapas cadastradas para esta investigação ]
 
 Conectando as informações
 [conceitos, chaves, períodos, conversões e limites]
@@ -650,7 +664,7 @@ Recursos novos não entram no contrato de arquivo estático por coerção. Sicon
 Fase 1: auditoria e contratos atuais, schema real e compatibilidade
 Fase 2: fontes, evidências e lacunas sem DDL
 Fase 3: dez tabelas; PK/FK/UNIQUE/CHECK/índices/RLS/grants via Management API
-Fase 4: importação idempotente e trilha MG com seis etapas
+Fase 4: importação idempotente e trilha MG com as etapas necessárias
 Fase 5: busca e cards verticais
 Fase 6: documentação técnica e previews limitados/validados
 Fase 7: pós-condições do banco, testes pertinentes e smoke test
@@ -736,7 +750,7 @@ Commit sugerido: feat(contas-minas): catálogo - persiste recursos e evidências
 
 ### Fase 4 Cadastro da primeira trilha de Minas
 
-Objetivo: disponibilizar as seis etapas pelo backend.
+Objetivo: disponibilizar pelo backend as etapas cadastradas para a investigação, sem quantidade fixa.
 
 Dependências: fases 2/3.
 
@@ -744,7 +758,7 @@ Contrato travado: uma base não é duplicada por trilha; ordem sugerida não é 
 
 Reaproveita: DataCatalogModel.ts:377; DataRoadmapModel.ts:38; routes/dataCatalogRoutes.ts:7; utils/apiResponse.ts.
 
-Ações: cadastrar CGE/SEF/Tesouro/IBGE com papéis distintos; importar bases/recursos/versões/conceitos; cadastrar trilha e seis etapas; expor endpoints propostos; manter DTOs e IDs antigos. Apenas DML após autorização da implementação; nenhum novo DDL.
+Ações: registrar os órgãos e conceitos necessários sem duplicar as estruturas do acervo; vincular os recursos existentes; cadastrar a trilha e suas etapas conforme a investigação; expor endpoints propostos; manter DTOs e IDs antigos. Apenas DML após autorização da implementação; nenhum novo DDL nesta fase.
 
 | Cenário obrigatório | Resultado |
 |---|---|
@@ -753,7 +767,7 @@ Ações: cadastrar CGE/SEF/Tesouro/IBGE com papéis distintos; importar bases/re
 | Importação falha na etapa 4 | Sem trilha parcialmente publicada |
 | Recurso histórico vazio | Etapa publicada com lacuna, sem Ver dados funcional |
 
-Critério de conclusão: API retorna seis etapas em ordem; órgãos/bases/status vêm do banco; importação dry-run e execução reconciliadas.
+Critério de conclusão: API retorna as etapas cadastradas na ordem sugerida e sem limite ou preenchimento artificial de seis cards; órgãos/bases/status vêm do banco; importação dry-run e execução reconciliadas. Validar zero, uma e mais de seis etapas.
 
 Risco: publicar um conjunto pelo simples fato de ter um link; quebrar dossiês do Senado ao trocar IDs.
 
@@ -872,7 +886,7 @@ npm run build
 npm run dev
 ~~~
 
-Smoke test: visitante abre /fonte-de-dados, busca a pergunta de Minas, vê seis cards verticais, abre etapa fora da ordem, consulta documentação, abre fonte e visualiza somente recurso compatível. Seleciona ano sem PIB, verifica a mensagem de cobertura, salva o link e exporta PDF com fontes/revisões.
+Smoke test: visitante abre /fonte-de-dados, busca a pergunta de Minas, vê a quantidade real de cards verticais retornada pela API, abre etapa fora da ordem, consulta documentação, abre fonte e visualiza somente recurso compatível. Seleciona ano sem PIB, verifica a mensagem de cobertura, salva o link e exporta PDF com fontes/revisões.
 
 Edge cases: arquivo só com cabeçalho, DataStore vazio apesar do CSV preenchido, origem 403, timeout, schema divergente, descompressão além do limite, ano parcial, contrato consolidado e divergência de unidade.
 
@@ -882,6 +896,6 @@ Banco: conferir as dez tabelas, colunas/defaults, FKs, constraints, índices, gr
 
 Recomendação: executar as fases 1–7 como diretório e trilha de investigação. A fase 8 é evolução independente, condicionada à reconciliação dos indicadores.
 
-Decisões propostas: catálogo operacional no Supabase; curadoria versionada; fases de verificação explícitas; seis cards verticais; busca lexical com perguntas/sinônimos; consultas sob demanda; salvamento local inicial; PDF com método e evidências; aplicação de DDL pela Management API somente depois da aprovação pertinente.
+Decisões propostas: reutilizar o catálogo operacional no Supabase; curadoria versionada; fases de verificação explícitas; quantidade variável de cards verticais; busca lexical com perguntas/sinônimos; consultas sob demanda; salvamento local inicial; PDF com método e evidências; aplicação de DDL pela Management API somente depois da aprovação pertinente.
 
 Lacunas prioritárias: recursos históricos vazios, diferenças entre as duas bases de despesa, classificação funcional na base nova, dimensão temporal de receita, FK de empenho, definição de encargos, contratos/aditivos, paginação Siconfi e reconciliação das fontes de PIB.
