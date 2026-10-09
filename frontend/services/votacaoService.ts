@@ -4,8 +4,8 @@ import type { VotacaoDetail, VotacoesPayload } from "@/types/votacao"
 /**
  * Service do dominio `votacao` (blueprint §1) — a leitura por pauta.
  *
- * Timeout longo pelo mesmo motivo do `senatorService`: na primeira requisicao o backend le 8
- * anos de votacoes na API do Senado antes de responder; depois serve do cache.
+ * Timeout longo pelo mesmo motivo do `senatorService`: na primeira requisicao o backend le
+ * as votacoes preservadas no Storage; depois serve do cache em memoria.
  */
 export const votacaoService = {
   /** Votações nominais, da mais recente para a mais antiga (GET /votacoes). */
