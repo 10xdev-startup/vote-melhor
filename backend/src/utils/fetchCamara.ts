@@ -1,12 +1,13 @@
 import { AppError } from '@/utils/AppError'
 import { tallyCamaraVotes } from '@/utils/normalizeCamaraVote'
+import { OfficialDataModel } from '@/models/OfficialDataModel'
+import { parseArchiveCsv } from '@/utils/parseArchiveCsv'
+import { CAMARA_CURRENT_DEPUTIES_URL, camaraDeputyPageName } from '@/utils/legislativeArchiveRequests'
 import type { CamaraRawAffectedProposition, CamaraRawDeputy, CamaraRawProposition, CamaraRawVote, CamaraRawVoting, CamaraVotingDataset } from '@/types/camara'
 
 const API_BASE_URL = 'https://dadosabertos.camara.leg.br/api/v2'
 const FILE_BASE_URL = 'https://dadosabertos.camara.leg.br/arquivos'
-const SOURCE_TIMEOUT_MS = 120_000
-const MAX_RESPONSE_BYTES = 64 * 1024 * 1024
-/** Os arquivos são atualizados diariamente; seis horas evitam releituras sem esconder dias. */
+/** Cache de leitura do acervo; a atualização pertence à importação administrativa. */
 const CACHE_TTL_MS = 6 * 60 * 60 * 1000
 const MAX_DEPUTY_PAGES = 20
 
@@ -14,13 +15,14 @@ export const CAMARA_RECORD_YEAR = 2026
 export const CAMARA_SOURCE_URLS = [
   `${API_BASE_URL}/deputados`,
   `${FILE_BASE_URL}/votacoes/json/votacoes-${CAMARA_RECORD_YEAR}.json`,
-  `${FILE_BASE_URL}/votacoesVotos/json/votacoesVotos-${CAMARA_RECORD_YEAR}.json`,
+  `${FILE_BASE_URL}/votacoesVotos/csv/votacoesVotos-${CAMARA_RECORD_YEAR}.csv`,
   `${FILE_BASE_URL}/votacoesProposicoes/json/votacoesProposicoes-${CAMARA_RECORD_YEAR}.json`,
 ]
 
 interface JsonResult {
   payload: unknown
-  lastModified: string | null
+  fetchedAt: string
+  dependencies: Record<string, string>
 }
 
 interface CachedDataset {
@@ -59,37 +61,13 @@ function readBooleanFlag(value: unknown): boolean | null {
   return null
 }
 
-async function requestJson(url: string, context: string): Promise<JsonResult> {
-  let response: Response
+async function requestJson(url: string, context: string, snapshotId?: string): Promise<JsonResult> {
+  const archive = await OfficialDataModel.readArchive(url, snapshotId)
+  if (archive.format !== 'JSON') throw new AppError(502, `Arquivo de ${context} não é JSON`, 'SOURCE_INVALID_RESPONSE')
   try {
-    response = await fetch(url, {
-      headers: { Accept: 'application/json', 'User-Agent': 'VoteMelhor/1.0 (+https://github.com/10xdev-startup/vote-melhor)' },
-      redirect: 'follow',
-      signal: AbortSignal.timeout(SOURCE_TIMEOUT_MS),
-    })
-  } catch (error) {
-    if (error instanceof Error && (error.name === 'TimeoutError' || error.name === 'AbortError')) {
-      throw new AppError(504, 'A Câmara não respondeu a tempo', 'SOURCE_TIMEOUT')
-    }
-    const cause = error instanceof Error ? (error.cause ?? error.message) : error
-    console.error('[camara] falha ao consultar a origem', { url, context, cause })
-    throw new AppError(502, 'A fonte da Câmara não respondeu', 'SOURCE_UNAVAILABLE')
-  }
-
-  if (!response.ok) throw new AppError(502, `A Câmara respondeu ${response.status}`, 'SOURCE_UNAVAILABLE')
-
-  const declaredLength = Number(response.headers.get('content-length'))
-  if (Number.isFinite(declaredLength) && declaredLength > MAX_RESPONSE_BYTES) {
-    throw new AppError(502, 'A resposta da Câmara excedeu o limite de segurança', 'SOURCE_TOO_LARGE')
-  }
-
-  const body = await response.text()
-  if (body.trim().length === 0) throw new AppError(502, 'A Câmara devolveu uma resposta vazia', 'SOURCE_EMPTY_RESPONSE')
-
-  try {
-    return { payload: JSON.parse(body) as unknown, lastModified: readString(response.headers.get('last-modified')) }
+    return { payload: JSON.parse(archive.body.toString('utf8')) as unknown, fetchedAt: archive.fetchedAt, dependencies: archive.dependencies }
   } catch {
-    throw new AppError(502, 'A Câmara devolveu um JSON inválido', 'SOURCE_INVALID_RESPONSE')
+    throw new AppError(502, 'O arquivo preservado da Câmara contém JSON inválido', 'SOURCE_INVALID_RESPONSE')
   }
 }
 
@@ -142,10 +120,10 @@ function toRawVote(value: unknown): CamaraRawVote | null {
     votingId,
     recordedAt: readString(row?.['dataHoraVoto']),
     officialCode,
-    deputyId: readNumber(deputy?.['id']),
-    deputyName: readString(deputy?.['nome']),
-    partyAtTime: readString(deputy?.['siglaPartido']),
-    state: readString(deputy?.['siglaUf']),
+    deputyId: readNumber(deputy?.['id'] ?? row?.['deputado_id']),
+    deputyName: readString(deputy?.['nome'] ?? row?.['deputado_nome']),
+    partyAtTime: readString(deputy?.['siglaPartido'] ?? row?.['deputado_siglaPartido']),
+    state: readString(deputy?.['siglaUf'] ?? row?.['deputado_siglaUf']),
   }
 }
 
@@ -179,36 +157,38 @@ function nextLink(payload: unknown): string | null {
   return null
 }
 
-async function fetchCurrentDeputies(): Promise<CamaraRawDeputy[]> {
+async function fetchCurrentDeputies(): Promise<{ deputies: CamaraRawDeputy[]; fetchedAt: string }> {
   const deputies: CamaraRawDeputy[] = []
   const visited = new Set<string>()
-  let url: string | null = `${API_BASE_URL}/deputados?itens=100&ordem=ASC&ordenarPor=nome`
+  let url: string | null = CAMARA_CURRENT_DEPUTIES_URL
+  let dependencies: Record<string, string> = {}; let fetchedAt = ''; let snapshotId: string | undefined
 
   while (url) {
     if (visited.has(url) || visited.size >= MAX_DEPUTY_PAGES) {
       throw new AppError(502, 'A paginação de deputados da Câmara não terminou', 'SOURCE_INVALID_RESPONSE')
     }
     visited.add(url)
-    const { payload } = await requestJson(url, 'deputados em exercício')
-    deputies.push(...readDataList(payload, 'a lista de deputados').map(toRawDeputy).filter((item): item is CamaraRawDeputy => item !== null))
+    const result = await requestJson(url, 'deputados em exercício', snapshotId)
+    if (visited.size === 1) { dependencies = result.dependencies; fetchedAt = result.fetchedAt }
+    const payload = result.payload
+    const rows = readDataList(payload, 'a lista de deputados').map(toRawDeputy)
+    if (!rows.length || rows.some((row) => row === null)) throw new AppError(502, 'Cadastro preservado de deputados incompleto', 'SOURCE_INVALID_RESPONSE')
+    deputies.push(...rows.filter((item): item is CamaraRawDeputy => item !== null))
     url = nextLink(payload)
+    if (url) {
+      snapshotId = dependencies[camaraDeputyPageName(visited.size + 1)]
+      if (!snapshotId) throw new AppError(503, 'Página de deputados não pertence à coleta preservada', 'ARCHIVE_RESOURCE_NOT_READY')
+    }
   }
 
-  return deputies
+  if (new Set(deputies.map((deputy) => deputy.id)).size !== deputies.length) throw new AppError(502, 'Cadastro preservado contém deputados duplicados', 'SOURCE_INVALID_RESPONSE')
+  return { deputies, fetchedAt }
 }
 
 export function isPublicNominalVoting(voting: CamaraRawVoting, votes: readonly CamaraRawVote[]): boolean {
   return voting.organ === 'PLEN' && votes.length > 0 && votes.every((vote) => vote.officialCode !== '')
 }
 
-function latestSourceDate(values: Array<string | null>): string | null {
-  const dates = values
-    .filter((value): value is string => value !== null)
-    .map((value) => new Date(value))
-    .filter((value) => Number.isFinite(value.getTime()))
-    .sort((a, b) => b.getTime() - a.getTime())
-  return dates[0]?.toISOString() ?? null
-}
 
 function validateTallies(votings: readonly CamaraRawVoting[], votes: readonly CamaraRawVote[]): void {
   const codesByVoting = new Map<string, string[]>()
@@ -230,15 +210,22 @@ function validateTallies(votings: readonly CamaraRawVoting[], votes: readonly Ca
 export async function fetchCamaraVotingDataset(): Promise<CamaraVotingDataset> {
   if (datasetCache && datasetCache.expiresAt > Date.now()) return datasetCache.dataset
 
-  const [deputies, votingsResult, votesResult, propositionsResult] = await Promise.all([
+  const [deputiesResult, votingsResult, votesResult, propositionsResult] = await Promise.all([
     fetchCurrentDeputies(),
     requestJson(CAMARA_SOURCE_URLS[1] ?? '', 'votações de 2026'),
-    requestJson(CAMARA_SOURCE_URLS[2] ?? '', 'votos de 2026'),
+    OfficialDataModel.readArchive(CAMARA_SOURCE_URLS[2] ?? ''),
     requestJson(CAMARA_SOURCE_URLS[3] ?? '', 'proposições afetadas em 2026'),
   ])
 
   const allVotings = readDataList(votingsResult.payload, 'as votações').map(toRawVoting).filter((item): item is CamaraRawVoting => item !== null)
-  const allVotes = readDataList(votesResult.payload, 'os votos').map(toRawVote).filter((item): item is CamaraRawVote => item !== null)
+  if (votesResult.format !== 'CSV') throw new AppError(502, 'Arquivo preservado de votos não é CSV', 'SOURCE_INVALID_RESPONSE')
+  let allVotes: CamaraRawVote[]
+  try { allVotes = Array.from(parseArchiveCsv(votesResult.body), (row) => {
+    const vote = toRawVote(row)
+    if (!vote) throw new Error('Registro de voto sem identificador ou código')
+    return vote
+  }) }
+  catch { throw new AppError(502, 'O arquivo preservado de votos contém CSV inválido', 'SOURCE_INVALID_RESPONSE') }
   const allAffected = readDataList(propositionsResult.payload, 'as proposições afetadas').map(toRawAffectedProposition).filter((item): item is CamaraRawAffectedProposition => item !== null)
 
   const votesByVoting = new Map<string, CamaraRawVote[]>()
@@ -255,11 +242,12 @@ export async function fetchCamaraVotingDataset(): Promise<CamaraVotingDataset> {
   validateTallies(votings, votes)
 
   const dataset: CamaraVotingDataset = {
-    deputies,
+    deputies: deputiesResult.deputies,
     votings,
     votes,
     affectedPropositions,
-    sourceUpdatedAt: latestSourceDate([votingsResult.lastModified, votesResult.lastModified, propositionsResult.lastModified]),
+    sourceUpdatedAt: null,
+    collectedAt: [deputiesResult.fetchedAt, votingsResult.fetchedAt, votesResult.fetchedAt, propositionsResult.fetchedAt].sort()[0]!,
   }
   datasetCache = { expiresAt: Date.now() + CACHE_TTL_MS, dataset }
   return dataset

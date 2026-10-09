@@ -10,7 +10,8 @@
     "lint": "eslint src/",
     "typecheck": "tsc --noEmit",
     "test": "jest",
-    "test:watch": "jest --watch"
+    "test:watch": "jest --watch",
+    "data:import": "NODE_EXTRA_CA_CERTS=./certs/icp-brasil-v10.crt ts-node src/scripts/importOfficialData.ts"
   },
   "keywords": [],
   "author": "",

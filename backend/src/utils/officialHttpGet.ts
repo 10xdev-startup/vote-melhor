@@ -43,14 +43,25 @@ export interface OfficialHttpResponse {
 export interface OfficialHttpOptions {
   headers?: Record<string, string>
   timeoutMs: number
+  maxBytes?: number
+  allowedHosts?: readonly string[]
 }
 
-function readBody(response: IncomingMessage): Promise<Buffer> {
+function readBody(response: IncomingMessage, maxBytes?: number): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const chunks: Buffer[] = []
+    let size = 0
 
     response.on('data', (chunk: Buffer | string) => {
-      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk))
+      const bytes = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)
+      size += bytes.length
+      if (maxBytes !== undefined && size > maxBytes) {
+        const error = new Error('Arquivo oficial excede o limite de bytes')
+        reject(error)
+        response.destroy(error)
+        return
+      }
+      chunks.push(bytes)
     })
     response.once('end', () => resolve(Buffer.concat(chunks)))
     response.once('aborted', () => reject(new Error('A origem interrompeu a resposta')))
@@ -74,6 +85,7 @@ export async function officialHttpGet(
   redirectsLeft = MAX_REDIRECTS
 ): Promise<OfficialHttpResponse> {
   const parsedUrl = new URL(url)
+  if (parsedUrl.protocol !== 'https:' || (options.allowedHosts && !options.allowedHosts.includes(parsedUrl.hostname))) throw new Error('Origem oficial não permitida')
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), options.timeoutMs)
 
@@ -102,7 +114,7 @@ export async function officialHttpGet(
           return
         }
 
-        readBody(incoming).then(
+        readBody(incoming, options.maxBytes).then(
           (body) => resolve({ status, body, headers: incoming.headers }),
           reject
         )

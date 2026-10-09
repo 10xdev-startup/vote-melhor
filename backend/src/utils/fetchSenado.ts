@@ -1,24 +1,12 @@
 import { AppError } from '@/utils/AppError'
-import { officialHttpGet, type OfficialHttpResponse } from '@/utils/officialHttpGet'
+import { OfficialDataModel } from '@/models/OfficialDataModel'
+import { senadoProcessUrl } from '@/utils/legislativeArchiveRequests'
 import type { SenadoRawProcess, SenadoRawSenator, SenadoRawVotacao, SenadoRawVote } from '@/types/senado'
 
-/**
- * Cliente da API de dados abertos do Senado.
- *
- * Vai pelo `officialHttpGet`, nao pelo `fetch` global: `legis.senado.leg.br` sofre do mesmo
- * problema de TLS dos outros hosts do Senado — o ClientHello TLS 1.3 do Node nao conclui
- * handshake e toda chamada morria em `UND_ERR_CONNECT_TIMEOUT` apos ~10,5s. Medido: sem flag
- * estoura 3/3; com TLS 1.2 responde em ~0,3s. Ver `investigacao-tls-senado.md`.
- *
- * Seguir redirect nao e detalhe: varios endpoints do Senado respondem 301 para um JSON
- * estatico. Sem seguir, o corpo volta vazio e o parser acusa erro de formato — por isso o
- * `officialHttpGet` trata isso, ja que `node:https` nao segue sozinho.
- */
+/** Leitor das respostas oficiais preservadas; a importação administrativa acessa o Senado. */
 
 const BASE_URL = 'https://legis.senado.leg.br/dadosabertos'
-const SOURCE_TIMEOUT_MS = 60_000
-const MAX_RESPONSE_BYTES = 40 * 1024 * 1024
-/** O Senado publica com ~4 dias de atraso; reler de hora em hora e mais que suficiente. */
+/** Cache de leitura do acervo; não dispara atualização no órgão. */
 const CACHE_TTL_MS = 60 * 60 * 1000
 
 interface CachedYear {
@@ -40,6 +28,7 @@ interface CachedProcess {
 const votacoesByYear = new Map<number, CachedYear>()
 let senatorsCache: CachedSenators | null = null
 const processCache = new Map<string, CachedProcess>()
+const collectedDates = new Map<string, string>()
 
 function readString(value: unknown): string | null {
   if (typeof value === 'string') {
@@ -74,39 +63,14 @@ function toHttps(value: string | null): string | null {
 }
 
 async function requestJson(path: string, context: string): Promise<unknown> {
-  let response: OfficialHttpResponse
+  const archive = await OfficialDataModel.readArchive(`${BASE_URL}${path}`)
+  if (archive.format !== 'JSON') throw new AppError(502, `Arquivo de ${context} não é JSON`, 'SOURCE_INVALID_RESPONSE')
   try {
-    response = await officialHttpGet(`${BASE_URL}${path}`, {
-      headers: { Accept: 'application/json' },
-      timeoutMs: SOURCE_TIMEOUT_MS,
-    })
-  } catch (error) {
-    if (error instanceof Error && (error.name === 'TimeoutError' || error.name === 'AbortError')) {
-      throw new AppError(504, 'O Senado não respondeu a tempo', 'SOURCE_TIMEOUT')
-    }
-    const cause = error instanceof Error ? (error.cause ?? error.message) : error
-    console.error('[senado] falha ao consultar a origem', { path, context, cause })
-    throw new AppError(502, 'A API do Senado não respondeu', 'SOURCE_UNAVAILABLE')
-  }
-
-  if (response.status < 200 || response.status >= 300) {
-    throw new AppError(502, `O Senado respondeu ${response.status}`, 'SOURCE_UNAVAILABLE')
-  }
-
-  const declaredLength = Number(response.headers['content-length'])
-  if (Number.isFinite(declaredLength) && declaredLength > MAX_RESPONSE_BYTES) {
-    throw new AppError(502, 'A resposta do Senado excedeu o limite de segurança', 'SOURCE_TOO_LARGE')
-  }
-
-  const body = response.body.toString('utf-8')
-  // Endpoint legado do Senado responde 200 com corpo vazio em vez de erro. Tratar como
-  // sucesso registraria "zero votacoes" silenciosamente.
-  if (body.trim().length === 0) throw new AppError(502, 'O Senado devolveu uma resposta vazia', 'SOURCE_EMPTY_RESPONSE')
-
-  try {
-    return JSON.parse(body) as unknown
+    const payload: unknown = JSON.parse(archive.body.toString('utf8'))
+    collectedDates.set(path, archive.fetchedAt)
+    return payload
   } catch {
-    throw new AppError(502, 'O Senado devolveu um JSON inválido', 'SOURCE_INVALID_RESPONSE')
+    throw new AppError(502, 'O arquivo preservado do Senado contém JSON inválido', 'SOURCE_INVALID_RESPONSE')
   }
 }
 
@@ -224,8 +188,8 @@ export async function fetchSenadoProcess(sigla: string, number: number, year: nu
   const cached = processCache.get(key)
   if (cached && cached.expiresAt > Date.now()) return cached.process
 
-  const query = new URLSearchParams({ sigla, numero: String(number), ano: String(year) })
-  const payload = await requestJson(`/processo?${query.toString()}`, `tramitação de ${sigla} ${number}/${year}`)
+  const path = senadoProcessUrl(sigla, number, year).slice(BASE_URL.length)
+  const payload = await requestJson(path, `tramitação de ${sigla} ${number}/${year}`)
   if (!Array.isArray(payload)) throw new AppError(502, 'O Senado devolveu a tramitação em formato inesperado', 'SOURCE_INVALID_RESPONSE')
 
   const identification = `${sigla} ${number}/${year}`
@@ -279,4 +243,21 @@ export function clearSenadoCache(): void {
   votacoesByYear.clear()
   senatorsCache = null
   processCache.clear()
+  collectedDates.clear()
+}
+
+/** Data real da coleta mais antiga entre os arquivos usados neste payload. */
+export function getSenadoCollectedAt(includeSenators = false): string {
+  const paths: string[] = []
+  for (let year = RECORD_FROM_YEAR; year <= currentYear(); year++) paths.push(`/votacao?dataInicio=${year}-01-01&dataFim=${year}-12-31`)
+  if (includeSenators) paths.push('/senador/lista/atual')
+  const dates = paths.map((path) => collectedDates.get(path))
+  if (!dates.length || dates.some((date) => !date)) throw new AppError(503, 'Data de coleta indisponível para este recorte', 'ARCHIVE_RESOURCE_NOT_READY')
+  return (dates as string[]).sort()[0]!
+}
+
+export function getSenadoProcessCollectedAt(sigla: string, number: number, year: number): string {
+  const date = collectedDates.get(senadoProcessUrl(sigla, number, year).slice(BASE_URL.length))
+  if (!date) throw new AppError(503, 'Data de coleta indisponível para a tramitação', 'ARCHIVE_RESOURCE_NOT_READY')
+  return date
 }
