@@ -1,7 +1,9 @@
 import type { InvestigationSource, InvestigationStep, InvestigationTrail } from '@/types/investigationTrail'
+import { PROCUREMENT_SOURCES, PROCUREMENT_TRAIL } from '@/data/procurementTrail'
 
 /** Exemplos editoriais do protótipo, sem alegação de verificação ou cobertura operacional. */
 export const DEMO_SOURCES: Record<string, InvestigationSource> = {
+  ...PROCUREMENT_SOURCES,
   revenue: { id: 'revenue', organization: 'Governo de Minas Gerais', title: 'Receita pública', officialUrl: 'https://dados.mg.gov.br/dataset/receita', access: ['CSV', 'Metadados'], instructions: 'Localizar o arquivo do exercício e seu dicionário. Conferir receita prevista, realizada e deduções antes de agregar.', endpoint: 'GET https://dados.mg.gov.br/api/3/action/package_show?id=receita' },
   expenses: { id: 'expenses', organization: 'Governo de Minas Gerais', title: 'Execução da despesa', officialUrl: 'https://www.transparencia.mg.gov.br/', access: ['Consulta', 'Dados abertos'], instructions: 'Escolher exercício e estágio da despesa. Conferir o recurso e o schema antes de consultar valores.' },
   debt: { id: 'debt', organization: 'Secretaria de Estado de Fazenda de MG', title: 'Boletins da dívida pública', officialUrl: 'https://www.fazenda.mg.gov.br/tesouro-estadual/divida-publica/boletins-da-divida-publica/', access: ['Página', 'PDF'], instructions: 'Selecionar o boletim da competência. Identificar saldo, credor, contrato, indexador e notas metodológicas.' },
@@ -47,4 +49,5 @@ export const DEMO_TRAILS: InvestigationTrail[] = [
   { id: 'receitas-minas', title: 'De onde vem o dinheiro de Minas?', question: 'Como é formada a arrecadação de Minas?', description: 'Uma investigação concentrada em receita, composição e confronto com o orçamento.', territory: 'Minas Gerais', searchTerms: ['receita', 'receitas', 'arrecadação', 'tributos', 'impostos', 'dinheiro'], steps: [steps[0]!, steps[1]!, steps[3]!] },
   { id: 'divida-minas', title: 'Quem financia a dívida de Minas?', question: 'Quem são os credores da dívida de Minas?', description: 'Um recorte sobre saldo, credores e condições dos contratos, incluindo lacunas de acesso.', territory: 'Minas Gerais', searchTerms: ['dívida', 'divida', 'credores', 'contratos', 'financia'], steps: [steps[4]!, steps[5]!] },
   { id: 'contas-brasil', title: 'Contas públicas do Brasil', question: 'Como entender as receitas, despesas e dívidas públicas do Brasil?', description: 'Uma investigação das contas federais e dos indicadores consolidados, distinguindo União, Governo Central, Governo Geral e setor público.', territory: 'Brasil', searchTerms: ['brasil', 'nacional', 'união', 'uniao', 'federal', 'contas', 'arrecada', 'gasta', 'deve', 'receitas', 'despesas', 'dívida'], steps: brazilSteps },
+  PROCUREMENT_TRAIL,
 ]

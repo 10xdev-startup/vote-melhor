@@ -8,6 +8,7 @@ export interface InvestigationSource {
   access: string[]
   instructions: string
   endpoint?: string
+  reviewNote?: string
 }
 
 export interface InvestigationStep {
@@ -21,6 +22,7 @@ export interface InvestigationStep {
   fields: string[]
   connection: string
   sample?: { columns: string[]; rows: string[][] }
+  guidance?: { actions: string[]; outcome: string; references: string[] }
 }
 
 export interface InvestigationTrail {
@@ -31,4 +33,5 @@ export interface InvestigationTrail {
   territory: string
   searchTerms: string[]
   steps: InvestigationStep[]
+  research?: { reviewedAt: string; scope: string }
 }
