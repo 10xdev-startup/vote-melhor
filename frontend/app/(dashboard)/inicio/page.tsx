@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { ArrowRight, Database, Landmark, Vote } from 'lucide-react'
+import { ArrowRight, Database, Landmark, ScrollText, Vote } from 'lucide-react'
 
 export const metadata: Metadata = {
   title: 'Início',
@@ -25,6 +25,12 @@ const DESTINATIONS = [
     icon: Database,
     title: 'Fonte de dados',
     description: 'Catálogo navegável dos arquivos publicados pelos órgãos oficiais.',
+  },
+  {
+    href: '/licitacoes',
+    icon: ScrollText,
+    title: 'Licitações',
+    description: 'Como uma empresa encontra um edital, disputa e chega ao contrato.',
   },
 ]
 
