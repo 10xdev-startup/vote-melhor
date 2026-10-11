@@ -1,6 +1,9 @@
 import dotenv from 'dotenv'
 import { importOfficialData } from '@/services/importOfficialData'
 import { mgRevenueAdapter } from '@/adapters/mgRevenue'
+import { mgDebtBulletinAdapter } from '@/adapters/mgDebtBulletin'
+import { licitarDigitalAdapter } from '@/adapters/licitarDigital'
+import { pncpProposalsAdapter } from '@/adapters/pncpProposals'
 import { createCatalogArchiveAdapters } from '@/adapters/catalogArchive'
 import type { OfficialDataAdapter } from '@/types/officialData'
 import { OfficialDataModel } from '@/models/OfficialDataModel'
@@ -13,7 +16,7 @@ dotenv.config({ override: true, quiet: true })
 const catalog = createCatalogArchiveAdapters()
 const legislative = [camaraArchiveAdapter, senadoArchiveAdapter]
 const screens = [camaraCurrentDeputiesAdapter, senadoCurrentProcessesAdapter]
-const adapters: Record<string, OfficialDataAdapter> = Object.fromEntries([mgRevenueAdapter, ...catalog, ...legislative, ...screens].map((adapter) => [adapter.id, adapter]))
+const adapters: Record<string, OfficialDataAdapter> = Object.fromEntries([mgRevenueAdapter, mgDebtBulletinAdapter, licitarDigitalAdapter, pncpProposalsAdapter, ...catalog, ...legislative, ...screens].map((adapter) => [adapter.id, adapter]))
 const selected = process.argv[2] === 'catalog' ? catalog : process.argv[2] === 'legislative' ? legislative : process.argv[2] === 'legislative-screens' ? screens : adapters[process.argv[2] ?? ''] ? [adapters[process.argv[2]!]!] : []
 if (!selected.length) { console.error(`Informe catalog, legislative, legislative-screens ou uma fonte cadastrada: ${Object.keys(adapters).join(', ')}`); process.exitCode = 1 }
 else (async () => {
