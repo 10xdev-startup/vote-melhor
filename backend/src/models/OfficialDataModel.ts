@@ -138,6 +138,22 @@ export const OfficialDataModel = {
     if (!data.active_snapshot_id) throw new AppError(409, 'Recurso ainda sem versão validada', 'RESOURCE_NOT_READY')
     return data as PublicResource
   },
+  /** Linhas da versão pronta. Ausência de coleta devolve null; erro de banco sobe. */
+  async readyRecords(sourceId: string, name: string): Promise<{ fetchedAt: string; verification: Record<string, unknown>; records: { payload: Record<string, unknown> }[] } | null> {
+    const resource = await supabase.from('public_data_resources').select('active_snapshot_id').eq('source_id', sourceId).eq('name', name).maybeSingle()
+    if (resource.error) throw resource.error
+    if (!resource.data?.active_snapshot_id) return null
+    const snapshot = await supabase.from('public_data_snapshots').select('fetched_at,verification').eq('id', resource.data.active_snapshot_id).eq('state', 'ready').single()
+    if (snapshot.error) throw snapshot.error
+    const records: { payload: Record<string, unknown> }[] = []
+    for (let from = 0; ; from += 1000) {
+      const page = await supabase.from('public_data_records').select('payload').eq('snapshot_id', resource.data.active_snapshot_id).order('row_number').range(from, from + 999)
+      if (page.error) throw page.error
+      records.push(...(page.data as { payload: Record<string, unknown> }[]))
+      if ((page.data ?? []).length < 1000) break
+    }
+    return { fetchedAt: snapshot.data.fetched_at as string, verification: snapshot.data.verification as Record<string, unknown>, records }
+  },
   async recordsPage(resource: PublicResource, year: number | null, page: number, limit: number) {
     if (resource.kind === 'document') throw new AppError(422, 'Documento disponível como original; sem registros tabulares', 'PREVIEW_NOT_SUPPORTED')
     const { data, error } = await supabase.rpc('read_public_data_page', { p_snapshot_id: resource.active_snapshot_id, p_year: year, p_offset: (page - 1) * limit, p_limit: limit })
