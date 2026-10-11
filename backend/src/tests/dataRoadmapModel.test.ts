@@ -8,10 +8,10 @@ describe('DataRoadmapModel', () => {
   const availableItems = items.filter((item) => item.status === 'available')
 
   it('expõe os status e mantém todo o cardápio', () => {
-    expect(DataRoadmapModel.countItems('available')).toBe(4)
+    expect(DataRoadmapModel.countItems('available')).toBe(5)
     expect(DataRoadmapModel.countItems('mapped')).toBe(22)
     expect(DataRoadmapModel.countItems('discovery')).toBe(0)
-    expect(items).toHaveLength(26)
+    expect(items).toHaveLength(27)
   })
 
   it('deriva todo item disponível de um conjunto real do catálogo', () => {
@@ -24,9 +24,8 @@ describe('DataRoadmapModel', () => {
       expect(item.description).toBe(dataset.description)
       expect(item.organ).toBe(dataset.organ)
       expect(item.officialUrl).toBe(dataset.officialUrl)
-      expect(item.access).toEqual([
-        ...new Set(dataset.editions.flatMap((edition) => edition.files.map((file) => file.format))),
-      ])
+      const fileAccess = [...new Set(dataset.editions.flatMap((edition) => edition.files.map((file) => file.format)))]
+      expect(item.access).toEqual(fileAccess.length > 0 ? fileAccess : ['Série anual'])
     })
   })
 
