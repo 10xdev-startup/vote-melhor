@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils'
 import { filterDatasets } from '@/lib/dataCatalogSearch'
 import { dataCatalogService } from '@/services/dataCatalogService'
 import { InvestigationTrailDemo } from '@/components/InvestigationTrailDemo'
+import { MinasFiscalSeries } from '@/components/MinasFiscalSeries'
 import type { DataFile, Dataset, DatasetEdition, DatasetGovernmentTerm, FilePreview, FilePreviewFilter, SourceSystem } from '@/types/dataCatalog'
 import type { DataRoadmapItem, DataRoadmapSection, DataRoadmapStatus } from '@/types/dataRoadmap'
 
@@ -872,7 +873,7 @@ function DatasetCard({ dataset }: { dataset: Dataset }) {
   const hasEditions = dataset.editions.length > 1
 
   if (!edition) return null
-  const fileCountLabel = `${edition.files.length} ${edition.files.length === 1 ? 'arquivo' : 'arquivos'}`
+  const fileCountLabel = dataset.fiscalSeries ? 'série anual' : `${edition.files.length} ${edition.files.length === 1 ? 'arquivo' : 'arquivos'}`
 
   return (
     <section className="overflow-hidden rounded-lg border bg-card">
@@ -931,6 +932,7 @@ function DatasetCard({ dataset }: { dataset: Dataset }) {
       </header>
 
       <div id={`dataset-files-${dataset.id}`} hidden={!isExpanded} className="divide-y">
+        {dataset.fiscalSeries && <MinasFiscalSeries series={dataset.fiscalSeries} />}
         {edition.files.map((file) => (
           <FileRow key={file.name} file={file} previousFile={dataset.editions[index - 1]?.files.find((candidate) => candidate.name === file.name)} nextFile={dataset.editions[index + 1]?.files.find((candidate) => candidate.name === file.name)} governmentTerms={dataset.governmentTerms ?? []} seriesFiles={dataset.editions.flatMap((candidateEdition) => candidateEdition.files)} />
         ))}
