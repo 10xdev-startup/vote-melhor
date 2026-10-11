@@ -9,6 +9,7 @@ import { votacaoRoutes } from '@/routes/votacaoRoutes'
 import { deputyRoutes } from '@/routes/deputyRoutes'
 import { camaraVotingRoutes } from '@/routes/camaraVotingRoutes'
 import { legislativeJourneyRoutes } from '@/routes/legislativeJourneyRoutes'
+import { procurementRoutes } from '@/routes/procurementRoutes'
 import { dossierRoutes } from '@/routes/dossierRoutes'
 import { errorHandler } from '@/middleware'
 
@@ -47,6 +48,7 @@ app.use('/votacoes', votacaoRoutes)
 app.use('/deputies', deputyRoutes)
 app.use('/camara/votacoes', camaraVotingRoutes)
 app.use('/legislative-journeys', legislativeJourneyRoutes)
+app.use('/licitacoes', procurementRoutes)
 
 // Handler de erro central — por ULTIMO, depois das rotas (serializa AppError no envelope).
 app.use(errorHandler)
