@@ -17,6 +17,7 @@ describe("isPublicPath", () => {
     expect(isPublicPath("/camara")).toBe(true)
     expect(isPublicPath("/senado")).toBe(true)
     expect(isPublicPath("/fonte-de-dados")).toBe(true)
+    expect(isPublicPath("/licitacoes")).toBe(true)
   })
 
   it("abre a landing e as telas de entrada", () => {
