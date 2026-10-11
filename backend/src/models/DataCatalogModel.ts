@@ -1,3 +1,4 @@
+import { MINAS_FISCAL_SERIES } from "@/data/minasFiscalSeries"
 import type { DataFile, Dataset, DatasetEdition, DatasetGovernmentTerm, SourceSystem } from "@/types/dataCatalog"
 
 /**
@@ -186,6 +187,13 @@ const ARQUIMEDES_BASE = "https://www.senado.gov.br/bi-arqs/Arquimedes/Financeiro
 
 const SP_TRANSPARENCY_URL = "https://www.transparencia.sp.gov.br/home/despcontratos"
 const SP_WEBSERVICE_URL = "https://webservices.fazenda.sp.gov.br/WSTransparencia/TransparenciaServico.asmx"
+const TESOURO: SourceSystem = {
+  name: "Tesouro Nacional",
+  description:
+    "A série de 2000 a 2014 foi tabulada pela Secretaria do Tesouro Nacional a partir do SISTN. De 2015 em diante, a dívida vem do Relatório de Gestão Fiscal e a receita corrente arrecadada vem do Relatório Resumido da Execução Orçamentária, ambos no Siconfi.",
+  referenceUrl: "https://www.tesourotransparente.gov.br/ckan/dataset/dcl-estados-2000-2014",
+}
+
 const SIAFEM_SP: SourceSystem = {
   name: "SIAFEM/SP",
   description:
@@ -257,6 +265,29 @@ const SP_GOVERNMENT_TERMS: DatasetGovernmentTerm[] = [
 ]
 
 const DATASETS: Dataset[] = [
+  {
+    id: "mg-divida-e-receita",
+    title: "Dívida e receita de Minas Gerais",
+    description:
+      "Saldo da dívida e receita de Minas Gerais no fechamento de cada ano, de 2000 a 2025, nos reais do relatório. Cobre Itamar Franco, Aécio Neves, Antonio Anastasia, Alberto Pinto Coelho, Fernando Pimentel e Romeu Zema.",
+    organ: "Secretaria do Tesouro Nacional",
+    group: "Finanças dos entes subnacionais",
+    sourceSystem: TESOURO,
+    updateFrequency: "Anual",
+    maintainer: "Secretaria do Tesouro Nacional",
+    officialUrl: "https://www.tesourotransparente.gov.br/ckan/dataset/dcl-estados-2000-2014",
+    collectedAt: "2026-10-10",
+    editions: [
+      {
+        id: "mg-divida-e-receita-2000-2025",
+        label: "2000–2025",
+        year: null,
+        updatedAt: "2026-10-10",
+        files: [],
+      },
+    ],
+    fiscalSeries: MINAS_FISCAL_SERIES,
+  },
   {
     id: "senado-dotacao-e-despesas",
     title: "Dotação autorizada e despesas executadas",

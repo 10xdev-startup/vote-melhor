@@ -6,7 +6,7 @@ import type { ImportResource, OfficialDataAdapter } from '@/types/officialData'
 
 /** Deriva o arquivo de coleta do mesmo catálogo que a interface usa; sem duplicar URLs. */
 export function createCatalogArchiveAdapters(): OfficialDataAdapter[] {
-  return DataCatalogModel.listDatasets().map((dataset) => ({
+  return DataCatalogModel.listDatasets().filter((dataset) => dataset.editions.some((edition) => edition.files.length > 0)).map((dataset) => ({
     id: dataset.id,
     allowedHosts: [...new Set(dataset.editions.flatMap((edition) => edition.files.map((file) => new URL(file.url).hostname)))],
     discover: async () => ({

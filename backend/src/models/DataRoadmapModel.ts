@@ -33,6 +33,11 @@ const AVAILABLE_ROADMAP_CONFIG: AvailableRoadmapConfig[] = [
     nextStep: 'Consolidar a série por exercício e comparar previsto, empenhado, liquidado e pago sem misturar as fases.',
     catalogQuery: 'investimentos são paulo',
   },
+  {
+    datasetId: 'mg-divida-e-receita',
+    nextStep: 'A série anual já pode ser lida no card. O detalhe por contrato e credor continua nos boletins da dívida.',
+    catalogQuery: 'minas',
+  },
 ]
 
 function buildAvailableItems(): DataRoadmapItem[] {
@@ -42,7 +47,8 @@ function buildAvailableItems(): DataRoadmapItem[] {
     const dataset = datasets.get(config.datasetId)
     if (!dataset) throw new Error(`Roadmap referencia conjunto inexistente: ${config.datasetId}`)
 
-    const access = [...new Set(dataset.editions.flatMap((edition) => edition.files.map((file) => file.format)))]
+    const fileAccess = [...new Set(dataset.editions.flatMap((edition) => edition.files.map((file) => file.format)))]
+    const access = fileAccess.length > 0 ? fileAccess : dataset.fiscalSeries ? ['Série anual'] : []
     return {
       id: dataset.id,
       title: dataset.title,
