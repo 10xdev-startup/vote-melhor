@@ -1,7 +1,7 @@
 // Rotas abertas a visitante. Ler dado oficial nao exige conta: o hub e as tres telas de
 // dado entram aqui junto da landing e das telas de entrada. O que depende de usuario
 // (/seja-bem-vindo, /componentes) fica de fora e continua atras do gate.
-const PUBLIC_PATHS = ['/', '/login', '/cadastro', '/inicio', '/camara', '/senado', '/fonte-de-dados', '/dossies']
+const PUBLIC_PATHS = ['/', '/login', '/cadastro', '/inicio', '/camara', '/senado', '/fonte-de-dados', '/licitacoes', '/dossies']
 
 // Prefixo, e nao path exato, porque cada campanha publica a propria rota sob /lp/. A lista
 // de cima nunca vira prefixo: '/camara' como prefixo abriria '/camara-secreta' junto.
