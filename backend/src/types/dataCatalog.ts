@@ -111,6 +111,46 @@ export interface Dataset {
   editions: DatasetEdition[]
   /** Presente em séries estaduais que podem ser comparadas por mandato de governo. */
   governmentTerms?: DatasetGovernmentTerm[]
+  /** Série anual já fechada, em reais do relatório de cada ano. Não passa pelo preview de arquivo. */
+  fiscalSeries?: DatasetFiscalSeries
+}
+
+export interface DatasetFiscalTerm {
+  id: string
+  label: string
+  period: string
+}
+
+export interface DatasetFiscalRow {
+  year: number
+  governor: string
+  termId: string
+  transition: boolean
+  /** Dívida consolidada. Ausente quando a fonte histórica só publicou a líquida. */
+  consolidatedDebt: number | null
+  netDebt: number
+  netCurrentRevenue: number
+  /** Receita corrente arrecadada, sem intraorçamentárias. Ausente antes de 2015. */
+  currentRevenue: number | null
+  /** Dívida líquida dividida pela receita corrente líquida do mesmo ano, em percentual. */
+  netDebtRatio: number
+  /** Composição do estoque por indexador no boletim de dezembro. Ausente quando não há boletim. */
+  indexer?: { inflation: number; exchange: number; floating: number; prefixed: number }
+}
+
+export interface DatasetFiscalSeries {
+  terms: DatasetFiscalTerm[]
+  rows: DatasetFiscalRow[]
+  partial: {
+    label: string
+    consolidatedDebt: number
+    netDebt: number
+    netDebtRatio: number
+    currentRevenue: number
+    note: string
+  } | null
+  sources: Array<{ label: string; url: string }>
+  note: string
 }
 
 export interface FilePreviewPagination {

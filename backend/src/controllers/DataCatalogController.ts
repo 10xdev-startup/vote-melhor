@@ -1,11 +1,12 @@
 import type { Request, Response } from 'express'
 import { DataCatalogModel } from '@/models/DataCatalogModel'
 import { DataRoadmapModel } from '@/models/DataRoadmapModel'
+import { OfficialDataModel } from '@/models/OfficialDataModel'
 import { parseFinancialReport, parseSpreadsheet, SpreadsheetParseError, type SpreadsheetFilter } from '@/utils/parseSpreadsheet'
 import { sendOk } from '@/utils/apiResponse'
 import { AppError } from '@/utils/AppError'
 import { fetchSourceFile } from '@/utils/fetchSourceFile'
-import { fetchSpFazendaExpenses } from '@/utils/fetchSpFazendaExpenses'
+import { fetchSpFazendaExpenses, renderSpFazendaExpenses } from '@/utils/fetchSpFazendaExpenses'
 import type { FilePreview } from '@/types/dataCatalog'
 
 /** Tamanho padrão e teto de cada página do visualizador. */
@@ -73,7 +74,12 @@ export const DataCatalogController = {
     const file = DataCatalogModel.findFileById(fileId)
     if (!file) throw new AppError(404, 'Arquivo não encontrado no catálogo', 'FILE_NOT_FOUND')
 
-    const buffer = file.sourceQuery ? await fetchSpFazendaExpenses(file.sourceQuery) : await fetchSourceFile(file.url)
+    const dataset = DataCatalogModel.findDatasetByFileId(fileId)
+    if (!dataset) throw new Error('Arquivo sem conjunto no catálogo')
+    const archived = await OfficialDataModel.storedOriginal(dataset.id, file.id)
+    const buffer = archived
+      ? file.sourceQuery ? renderSpFazendaExpenses(archived, file.sourceQuery) : archived
+      : file.sourceQuery ? await fetchSpFazendaExpenses(file.sourceQuery) : await fetchSourceFile(file.url)
     const pageSize = resolveLimit(req.query['limit'])
     const page = resolvePage(req.query['page'])
     const filters = resolveFilters(req.query['filters'])

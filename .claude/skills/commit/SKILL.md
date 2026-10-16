@@ -25,8 +25,9 @@ npm run typecheck -w frontend && npm run lint -w frontend
 
 - **Sempre pedido**, independente do tamanho da mudanca. Se falhar, corrija e peca de novo.
   Nao prossiga ate passar.
-- `npm run build` so quando o dev pedir, ou quando a mudanca tocar `types/`, `tsconfig`,
-  `package.json` ou config de build.
+- `npm run build` somente na etapa de commit. Nessa etapa, inclua o build quando o dev
+  pedir ou quando a mudanca tocar `types/`, `tsconfig`, `package.json` ou config de build.
+  Nao antecipar o build durante implementacao, prototipacao ou fechamento de fase.
 
 O agente roda apenas testes Jest **filtrados por arquivo**, que sao leves:
 `npm test -w backend -- <arquivo>` / `npm test -w frontend -- <arquivo>`, ou `-- -o` para

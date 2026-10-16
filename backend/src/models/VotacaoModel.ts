@@ -1,5 +1,5 @@
 import { classifyResult, classifyVotacaoKind, classifyVote, isContestedVotacao, tallyVotacao, voteMargin } from '@/utils/normalizeSenadoVote'
-import { currentYear, fetchNominalVotacoes, RECORD_FROM_YEAR } from '@/utils/fetchSenado'
+import { currentYear, fetchNominalVotacoes, getSenadoCollectedAt, RECORD_FROM_YEAR } from '@/utils/fetchSenado'
 import { officialMateriaUrl, votacaoId } from '@/utils/senadoIdentifiers'
 import type { MateriaGroup, SenadoRawVotacao, VotacaoDetail, VotacaoSenatorVote, VotacaoSummary, VotacoesPayload } from '@/types/senado'
 
@@ -108,7 +108,7 @@ export const VotacaoModel = {
     const materias = groupByMateria(votacoes)
 
     return {
-      collectedAt: new Date().toISOString(),
+      collectedAt: getSenadoCollectedAt(),
       coverage: {
         fromYear: RECORD_FROM_YEAR,
         toYear: currentYear(),

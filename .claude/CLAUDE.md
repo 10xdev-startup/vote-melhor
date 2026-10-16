@@ -85,6 +85,10 @@ nao aguenta e trava (mesma razao da regra de `npm test` em **Testes**). Ao fecha
 liste os comandos e espere o retorno colado. O agente roda apenas testes Jest **filtrados por
 arquivo**, que sao leves.
 
+**Build somente na etapa de commit**, conforme orientacao do usuario. Durante a implementacao
+ou validacao de um prototipo, use testes filtrados, typecheck e lint conforme a autorizacao da
+sessao; nao antecipe o build por ter alterado tipos ou pelo fechamento de uma fase.
+
 ### Raiz (workspaces)
 ```bash
 npm ci             # Instala exatamente o lockfile raiz

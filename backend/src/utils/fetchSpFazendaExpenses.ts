@@ -22,7 +22,9 @@ interface ExpenseItem {
 interface CachedSnapshot {
   expiresAt: number
   rawXml: string
-  items: ExpenseItem[]
+  items?: ExpenseItem[]
+  original: Buffer
+  fetchedAt: string
 }
 
 const snapshots = new Map<number, CachedSnapshot>()
@@ -34,7 +36,7 @@ const parser = new XMLParser({
   isArray: (tagName) => tagName === 'ItemDespesa',
 })
 
-function buildRequestBody(year: number): string {
+export function buildSpFazendaRequestBody(year: number): string {
   return `<?xml version="1.0" encoding="utf-8"?><soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"><soap:Header><AutenticacaoHeader xmlns="http://fazenda.sp.gov.br/wstransparencia"><Usuario></Usuario><Senha></Senha></AutenticacaoHeader></soap:Header><soap:Body><ConsultarDespesasDotacao xmlns="http://fazenda.sp.gov.br/wstransparencia"><ano>${year}</ano><codigoOrgao>Detalhado</codigoOrgao><codigoUo>Consolidado</codigoUo><codigoUnidadeGestora>Consolidado</codigoUnidadeGestora><codigoFonteRecursos>Consolidado</codigoFonteRecursos><codigoFuncao>Consolidado</codigoFuncao><codigoSubfuncao>Consolidado</codigoSubfuncao><codigoPrograma>Consolidado</codigoPrograma><codigoAcao>Consolidado</codigoAcao><codigoFuncionalProgramatica>Consolidado</codigoFuncionalProgramatica><codigoCategoriaDespesa>Todos</codigoCategoriaDespesa><codigoGrupo>Todos</codigoGrupo><codigoModalidade>Todos</codigoModalidade><codigoElemento>Todos</codigoElemento><flagDotacaoInicial>true</flagDotacaoInicial><flagDotacaoAtual>true</flagDotacaoAtual><flagEmpenhado>true</flagEmpenhado><flagLiquidado>true</flagLiquidado><flagPago>true</flagPago></ConsultarDespesasDotacao></soap:Body></soap:Envelope>`
 }
 
@@ -83,7 +85,7 @@ async function fetchSnapshot(year: number): Promise<CachedSnapshot> {
     response = await fetch(ENDPOINT, {
       method: 'POST',
       headers: { 'Content-Type': 'text/xml; charset=utf-8', SOAPAction: SOAP_ACTION, 'User-Agent': 'VoteMelhor/1.0 (+https://github.com/10xdev-startup/vote-melhor)' },
-      body: buildRequestBody(year),
+      body: buildSpFazendaRequestBody(year),
       signal: AbortSignal.timeout(SOURCE_TIMEOUT_MS),
     })
   } catch (error) {
@@ -97,9 +99,10 @@ async function fetchSnapshot(year: number): Promise<CachedSnapshot> {
   const declaredLength = Number(response.headers.get('content-length'))
   if (Number.isFinite(declaredLength) && declaredLength > MAX_RESPONSE_BYTES) throw new AppError(502, 'A resposta da Fazenda excedeu o limite de segurança', 'SOURCE_TOO_LARGE')
 
-  const rawXml = await response.text()
-  if (Buffer.byteLength(rawXml) > MAX_RESPONSE_BYTES) throw new AppError(502, 'A resposta da Fazenda excedeu o limite de segurança', 'SOURCE_TOO_LARGE')
-  const snapshot = { expiresAt: Date.now() + CACHE_TTL_MS, rawXml, items: parseSpFazendaExpensesXml(rawXml) }
+  const original = Buffer.from(await response.arrayBuffer())
+  if (original.length > MAX_RESPONSE_BYTES) throw new AppError(502, 'A resposta da Fazenda excedeu o limite de segurança', 'SOURCE_TOO_LARGE')
+  const rawXml = original.toString('utf8')
+  const snapshot = { expiresAt: Date.now() + CACHE_TTL_MS, rawXml, original, fetchedAt: new Date().toISOString() }
   snapshots.set(year, snapshot)
   return snapshot
 }
@@ -118,8 +121,23 @@ function classifyNature(element: string): { prefix: '44' | '45'; label: string }
  */
 export async function fetchSpFazendaExpenses(query: DataFileSourceQuery): Promise<Buffer> {
   const snapshot = await fetchSnapshot(query.year)
+  snapshot.items ??= parseSpFazendaExpensesXml(snapshot.rawXml)
+  return encodeSpFazendaRecords(snapshot.items, query)
+}
+
+/** Os bytes oficiais antes de qualquer seleção ou normalização. */
+export async function fetchSpFazendaOriginal(year: number): Promise<{ body: Buffer; fetchedAt: string }> {
+  const snapshot = await fetchSnapshot(year)
+  return { body: snapshot.original, fetchedAt: snapshot.fetchedAt }
+}
+
+export function renderSpFazendaExpenses(original: Buffer, query: DataFileSourceQuery): Buffer {
+  return encodeSpFazendaRecords(parseSpFazendaExpensesXml(original.toString('utf8')), query)
+}
+
+function encodeSpFazendaRecords(items: ExpenseItem[], query: DataFileSourceQuery): Buffer {
   const allowed = new Set(query.naturePrefixes)
-  const records = snapshot.items.flatMap((item) => {
+  const records = items.flatMap((item) => {
     const element = readText(item.CodigoNomeElemento)
     const nature = classifyNature(element)
     if (!nature || !allowed.has(nature.prefix)) return []

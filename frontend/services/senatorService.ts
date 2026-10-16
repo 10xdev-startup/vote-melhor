@@ -4,8 +4,8 @@ import type { SenatorDetail, SenatorsPayload } from "@/types/senator"
 /**
  * Service do dominio `senator` (blueprint §1) — fino, sobre o `apiClient`.
  *
- * As duas chamadas usam timeout longo: na primeira requisicao o backend le 8 anos de
- * votacoes da API do Senado (~1s) antes de responder. Depois disso ele serve do cache.
+ * As duas chamadas usam timeout longo: na primeira requisicao o backend le os JSONs
+ * preservados no Storage. Depois disso ele serve do cache em memoria.
  */
 export const senatorService = {
   /** Senadores em exercício com o retrospecto de cada um (GET /senators). */

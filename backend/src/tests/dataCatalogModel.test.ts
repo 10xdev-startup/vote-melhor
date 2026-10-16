@@ -7,8 +7,8 @@ const allFiles = catalog.flatMap((dataset) => dataset.editions.flatMap((edition)
 // O catalogo e curado a mao: o risco e id repetido, url fora do dominio oficial e arquivo
 // perdendo o nome legivel — que e o motivo da pagina existir.
 describe('DataCatalogModel', () => {
-  it('agrupa os arquivos em 4 conjuntos, com os exercícios como edições', () => {
-    expect(catalog).toHaveLength(4)
+  it('agrupa os arquivos em 5 conjuntos, com os exercícios como edições', () => {
+    expect(catalog).toHaveLength(5)
     expect(allFiles).toHaveLength(57)
 
     const demonstracoes = catalog.find((dataset) => dataset.id === 'senado-demonstracoes-contabeis')
@@ -52,10 +52,22 @@ describe('DataCatalogModel', () => {
 
   it('explica o sistema de origem e cita a página oficial que sustenta a definição', () => {
     const systems = new Map(catalog.map((dataset) => [dataset.sourceSystem.name, dataset.sourceSystem]))
-    expect([...systems.keys()].sort()).toEqual(['Arquimedes', 'SIAFEM/SP', 'SIAFI'])
+    expect([...systems.keys()].sort()).toEqual(['Arquimedes', 'SIAFEM/SP', 'SIAFI', 'Tesouro Nacional'])
     expect(systems.get('SIAFI')?.referenceUrl).toContain('tesouronacional')
     expect(systems.get('Arquimedes')?.referenceUrl).toContain('senado.leg.br')
     expect(systems.get('SIAFEM/SP')?.referenceUrl).toContain('transparencia.sp.gov.br')
+  })
+
+  it('publica a série nominal de dívida e receita de Minas, de 2000 a 2025', () => {
+    const minas = catalog.find((dataset) => dataset.id === 'mg-divida-e-receita')
+    const rows = minas?.fiscalSeries?.rows ?? []
+    expect(rows.map((row) => row.year)).toEqual(Array.from({ length: 26 }, (_value, index) => 2000 + index))
+    expect(rows[0]).toMatchObject({ netDebt: 13_614_394_000, consolidatedDebt: null, currentRevenue: null, netDebtRatio: 141 })
+    expect(rows.find((row) => row.year === 2002)?.netDebtRatio).toBe(263)
+    expect(rows.find((row) => row.year === 2014)?.consolidatedDebt).toBe(93_730_879_484.66)
+    expect(rows.find((row) => row.year === 2015)?.currentRevenue).toBe(65_542_749_781.97)
+    expect(rows.at(-1)).toMatchObject({ year: 2025, consolidatedDebt: 213_515_242_948.53, governor: 'Romeu Zema' })
+    expect(minas?.editions[0]?.files).toEqual([])
   })
 
   it('documenta os mandatos e os anos de transição da série paulista', () => {

@@ -20,6 +20,7 @@ function TooltipContent({
   ref?: React.Ref<React.ElementRef<typeof TooltipPrimitive.Content>>
 }) {
   return (
+    <TooltipPrimitive.Portal>
     <TooltipPrimitive.Content
       ref={ref}
       sideOffset={sideOffset}
@@ -29,6 +30,7 @@ function TooltipContent({
       )}
       {...props}
     />
+    </TooltipPrimitive.Portal>
   )
 }
 

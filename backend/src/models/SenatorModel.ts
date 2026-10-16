@@ -1,5 +1,5 @@
 import { buildSenatorRecord, classifyVote, tallyVotacao } from '@/utils/normalizeSenadoVote'
-import { currentYear, fetchCurrentSenators, fetchNominalVotacoes, RECORD_FROM_YEAR } from '@/utils/fetchSenado'
+import { currentYear, fetchCurrentSenators, fetchNominalVotacoes, getSenadoCollectedAt, RECORD_FROM_YEAR } from '@/utils/fetchSenado'
 import { officialMateriaUrl, votacaoId } from '@/utils/senadoIdentifiers'
 import type { SenatorDetail, SenatorSummary, SenatorVoteRow, SenatorsPayload } from '@/types/senado'
 
@@ -40,7 +40,7 @@ export const SenatorModel = {
     }))
 
     return {
-      collectedAt: new Date().toISOString(),
+      collectedAt: getSenadoCollectedAt(true),
       sourceVersion,
       coverage: { fromYear: RECORD_FROM_YEAR, toYear: currentYear(), votacaoCount: votacoes.length },
       senators: summaries,
